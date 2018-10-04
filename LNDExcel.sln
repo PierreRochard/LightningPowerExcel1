@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28010.2003
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LNDExcel", "LNDExcel\LNDExcel.csproj", "{CBE8AECF-9FAD-455B-B95B-FCF48C248D29}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LNDExcelTests2", "LNDExcelTests2\LNDExcelTests2.csproj", "{71F29641-E733-43AE-B884-3B37DB9A8B64}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CBE8AECF-9FAD-455B-B95B-FCF48C248D29}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CBE8AECF-9FAD-455B-B95B-FCF48C248D29}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CBE8AECF-9FAD-455B-B95B-FCF48C248D29}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CBE8AECF-9FAD-455B-B95B-FCF48C248D29}.Release|Any CPU.Build.0 = Release|Any CPU
+		{71F29641-E733-43AE-B884-3B37DB9A8B64}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{71F29641-E733-43AE-B884-3B37DB9A8B64}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{71F29641-E733-43AE-B884-3B37DB9A8B64}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{71F29641-E733-43AE-B884-3B37DB9A8B64}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {9EA98778-8175-4348-BACE-9843E5858199}
+	EndGlobalSection
+EndGlobal
