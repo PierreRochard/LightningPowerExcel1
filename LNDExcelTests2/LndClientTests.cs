@@ -59,5 +59,25 @@ namespace LNDExcel.Tests
 
             Assert.IsNotNull(response.Address);
         }
+
+        [TestMethod()]
+        public void ListChannelsTest()
+        {
+            // Arrange
+            LndClient lndClient = new LndClient();
+
+            // Act
+            ListChannelsResponse response = lndClient.ListChannels();
+
+            Assert.IsNotNull(response);
+        }
+
+        [TestMethod()]
+        public void ListPaymentsTest()
+        {
+            LndClient lndClient = new LndClient();
+            var response = lndClient.ListPayments();
+            Assert.IsNotNull(response);
+        }
     }
 }

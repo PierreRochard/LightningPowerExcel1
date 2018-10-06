@@ -14,6 +14,8 @@ namespace LNDExcel
     {
         UnlockWalletResponse UnlockWallet(string password);
         GetInfoResponse GetInfo();
+        NewAddressResponse NewAddress(NewAddressRequest.Types.AddressType type);
+        ListChannelsResponse ListChannels();
     }
 
     public class LndClient : ILndClient
@@ -112,6 +114,34 @@ namespace LNDExcel
         {
             NewAddressRequest request = new NewAddressRequest { Type = addressType };
             NewAddressResponse response = GetLightningClient().NewAddress(request);
+            return response;
+        }
+
+        public ListChannelsResponse ListChannels()
+        {
+            ListChannelsRequest request = new ListChannelsRequest();
+            ListChannelsResponse response = GetLightningClient().ListChannels(request);
+            return response;
+        }
+
+        public SendResponse SendPayment(string paymentRequest)
+        {
+            SendRequest request = new SendRequest {PaymentRequest = paymentRequest};
+            SendResponse response = GetLightningClient().SendPaymentSync(request);
+            return response;
+        }
+
+        public PayReq DecodePaymentRequest(string paymentRequest)
+        {
+            PayReqString request = new PayReqString {PayReq = paymentRequest};
+            PayReq response = GetLightningClient().DecodePayReq(request);
+            return response;
+        }
+
+        public ListPaymentsResponse ListPayments()
+        {
+            ListPaymentsRequest request = new ListPaymentsRequest();
+            ListPaymentsResponse response = GetLightningClient().ListPayments(request);
             return response;
         }
     }

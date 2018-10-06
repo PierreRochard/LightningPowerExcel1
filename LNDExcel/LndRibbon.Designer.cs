@@ -40,6 +40,7 @@
             this.connectLnd2 = this.Factory.CreateRibbonButton();
             this.group3 = this.Factory.CreateRibbonGroup();
             this.button1 = this.Factory.CreateRibbonButton();
+            this.editBox2 = this.Factory.CreateRibbonEditBox();
             this.group1 = this.Factory.CreateRibbonGroup();
             this.editBox1 = this.Factory.CreateRibbonEditBox();
             this.tab1.SuspendLayout();
@@ -74,20 +75,29 @@
             // group3
             // 
             this.group3.Items.Add(this.button1);
-            this.group3.Label = "group3";
+            this.group3.Items.Add(this.editBox2);
+            this.group3.Label = "Bitcoin";
             this.group3.Name = "group3";
             // 
             // button1
             // 
-            this.button1.Description = "New Address";
-            this.button1.Label = "New Address";
+            this.button1.Description = "Generate New Address";
+            this.button1.Label = "Generate New Address";
             this.button1.Name = "button1";
-            this.button1.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.newAddressClick);
+            this.button1.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.button1_Click);
+            // 
+            // editBox2
+            // 
+            this.editBox2.Label = "New Address:";
+            this.editBox2.Name = "editBox2";
+            this.editBox2.SizeString = "paddingtb1q0tt3rdscteaftam3rktfg37at27qtdctlree7g";
+            this.editBox2.Text = null;
+            this.editBox2.TextChanged += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.editBox2_TextChanged);
             // 
             // group1
             // 
             this.group1.Items.Add(this.editBox1);
-            this.group1.Label = "group1";
+            this.group1.Label = "Lightning";
             this.group1.Name = "group1";
             // 
             // editBox1
@@ -125,6 +135,7 @@
         internal Microsoft.Office.Tools.Ribbon.RibbonGroup group2;
         internal Microsoft.Office.Tools.Ribbon.RibbonGroup group3;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton connectLnd2;
+        internal Microsoft.Office.Tools.Ribbon.RibbonEditBox editBox2;
     }
 
     partial class ThisRibbonCollection
