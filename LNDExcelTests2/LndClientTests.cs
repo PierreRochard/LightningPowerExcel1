@@ -79,5 +79,14 @@ namespace LNDExcel.Tests
             var response = lndClient.ListPayments();
             Assert.IsNotNull(response);
         }
+
+        [TestMethod()]
+        public void SendPaymentTest()
+        {
+            LndClient lndClient = new LndClient();
+            // Todo: query a testnet lapp for a payment request
+            var response = lndClient.SendPayment("");
+            Assert.IsNotNull(response);
+        }
     }
 }

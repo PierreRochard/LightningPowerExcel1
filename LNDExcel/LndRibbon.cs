@@ -54,6 +54,7 @@ namespace LNDExcel
             }
 
             editBox1.Text = "";
+            Globals.ThisAddIn.LApp.Refresh(SheetNames.Payments);
         }
 
         private void connectLnd2_Click(object sender, RibbonControlEventArgs e)
@@ -120,8 +121,8 @@ namespace LNDExcel
 
         private void button1_Click(object sender, RibbonControlEventArgs e)
         {
-            var address = Globals.ThisAddIn.LApp.NewAddress();
-            editBox2.Text = address;
+            var address = Globals.ThisAddIn.LApp.LndClient.NewAddress();
+            editBox2.Text = address.Address;
         }
     }
 }

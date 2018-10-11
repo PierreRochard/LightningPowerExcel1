@@ -144,5 +144,12 @@ namespace LNDExcel
             ListPaymentsResponse response = GetLightningClient().ListPayments(request);
             return response;
         }
+
+        public TransactionDetails GetTransactions()
+        {
+            GetTransactionsRequest request = new GetTransactionsRequest();
+            TransactionDetails response = GetLightningClient().GetTransactions(request);
+            return response;
+        }
     }
 }

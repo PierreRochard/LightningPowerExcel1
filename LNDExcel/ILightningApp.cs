@@ -1,23 +1,19 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.Threading;
 using System.Windows.Forms;
+using Google.Protobuf;
+using Google.Protobuf.Collections;
+using Google.Protobuf.Reflection;
 using Lnrpc;
 using LNDExcel;
 
 namespace LNDExcel
 {
-    internal static class SheetNames
-    {
-        internal const string GetInfo = "Info";
-        internal const string Channels = "Channels";
-        internal const string Payments = "Payments";
-    }
-
     public interface ILightningApp
     {
         void RefreshGetInfo();
-        void RefreshChannels();
-        string NewAddress();
     }
 
     public class LightningApp: ILightningApp
@@ -30,6 +26,25 @@ namespace LNDExcel
         {
             LndClient = new LndClient();
             _excelAddIn = excelAddIn;
+        }
+        
+        public void Refresh(string name)
+        {
+            switch (name)
+            {
+                case SheetNames.GetInfo:
+                    RefreshGetInfo();
+                    break;
+                case SheetNames.Channels:
+                    Refresh<ListChannelsResponse, Channel>(name, Channel.Descriptor, "Channels", LndClient.ListChannels);
+                    break;
+                case SheetNames.Payments:
+                    Refresh<ListPaymentsResponse, Payment>(name, Payment.Descriptor, "Payments", LndClient.ListPayments);
+                    break;
+                case SheetNames.SendPayment:
+                    _excelAddIn.SetupPaymentRequest();
+                    break;
+            }
         }
 
         public void RefreshGetInfo()
@@ -57,59 +72,30 @@ namespace LNDExcel
             _excelAddIn.PopulateVerticalTable(SheetNames.GetInfo, GetInfoResponse.Descriptor, response);
         }
 
-        public void RefreshChannels()
+        public void Refresh<TResponse, TData>(string sheetName, MessageDescriptor messageDescriptor, string propertyName, Func<IMessage> query)
         {
-            _excelAddIn.MarkAsLoadingTable(SheetNames.Channels, Channel.Descriptor);
+            _excelAddIn.MarkAsLoadingTable(sheetName, messageDescriptor);
 
             BackgroundWorker bw = new BackgroundWorker();
             if (SynchronizationContext.Current == null)
             {
                 SynchronizationContext.SetSynchronizationContext(new WindowsFormsSynchronizationContext());
             }
-            bw.DoWork += BwListChannels;
-            bw.RunWorkerCompleted += BwListChannelsCompleted;
-            bw.RunWorkerAsync();
-        }
-        
-        private void BwListChannels(object sender, DoWorkEventArgs e)
-        {
-            e.Result = LndClient.ListChannels();
-        }
-
-        private void BwListChannelsCompleted(object sender, RunWorkerCompletedEventArgs e)
-        {
-            var response = (ListChannelsResponse)e.Result;
-            _excelAddIn.PopulateTable(SheetNames.Channels, Channel.Descriptor, response.Channels);
-        }
-
-        public void RefreshPayments()
-        {
-            _excelAddIn.MarkAsLoadingTable(SheetNames.Payments, Payment.Descriptor);
-
-            BackgroundWorker bw = new BackgroundWorker();
-            if (SynchronizationContext.Current == null)
-            {
-                SynchronizationContext.SetSynchronizationContext(new WindowsFormsSynchronizationContext());
-            }
-            bw.DoWork += BwListPayments;
-            bw.RunWorkerCompleted += BwListPaymentsCompleted;
+            bw.DoWork += (o, args) => BwList(o, args, query);
+            bw.RunWorkerCompleted += (o, args) => BwListCompleted<TResponse, TData>(o, args, sheetName, messageDescriptor, propertyName);
             bw.RunWorkerAsync();
         }
 
-        private void BwListPayments(object sender, DoWorkEventArgs e)
+        private void BwList(object sender, DoWorkEventArgs e, Func<IMessage> query)
         {
-            e.Result = LndClient.ListPayments();
+            e.Result = query();
         }
 
-        private void BwListPaymentsCompleted(object sender, RunWorkerCompletedEventArgs e)
+        private void BwListCompleted<T, T2>(object sender, RunWorkerCompletedEventArgs e, string sheetName, MessageDescriptor messageDescriptor, string propertyName)
         {
-            var response = (ListPaymentsResponse)e.Result;
-            _excelAddIn.PopulateTable(SheetNames.Payments, Payment.Descriptor, response.Payments);
-        }
-
-        public string NewAddress()
-        {
-            return LndClient.NewAddress().Address;
+            var response = (T)e.Result;
+            var data = (RepeatedField<T2>) response.GetType().GetProperty(propertyName)?.GetValue(response, null);
+            _excelAddIn.PopulateTable(sheetName, messageDescriptor, data);
         }
     }
 }
