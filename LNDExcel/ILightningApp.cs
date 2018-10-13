@@ -42,16 +42,48 @@ namespace LNDExcel
                     Refresh<ListPaymentsResponse, Payment>(name, Payment.Descriptor, "Payments", LndClient.ListPayments);
                     break;
                 case SheetNames.SendPayment:
-                    _excelAddIn.SetupPaymentRequest();
+                 //   _excelAddIn.SetupPaymentRequest();
                     break;
             }
+        }
+
+        public void SendPayment(string paymentRequest)
+        {
+            _excelAddIn.MarkSendingPayment();
+            BackgroundWorker bw = new BackgroundWorker();
+            if (SynchronizationContext.Current == null)
+            {
+                SynchronizationContext.SetSynchronizationContext(new WindowsFormsSynchronizationContext());
+            }
+            bw.DoWork += (o, args) => bw_SendPayment(o, args, paymentRequest);
+            bw.RunWorkerCompleted += bw_SendPayment_Completed;
+            bw.RunWorkerAsync();
+        }
+
+        private void bw_SendPayment(object sender, DoWorkEventArgs e, string paymentRequest)
+        {
+            try
+            {
+                e.Result = LndClient.SendPayment(paymentRequest);
+            }
+            catch (Exception exception)
+            {
+                Console.WriteLine(exception);
+                throw;
+            }
+        }
+
+        private void bw_SendPayment_Completed(object sender, RunWorkerCompletedEventArgs e)
+        {
+            var response = (SendResponse)e.Result;
+            _excelAddIn.PopulateSendPaymentResponse(response);
         }
 
         public void RefreshGetInfo()
         {
             _excelAddIn.MarkAsLoadingVerticalTable(SheetNames.GetInfo, GetInfoResponse.Descriptor);
 
-            BackgroundWorker bw = new BackgroundWorker { WorkerSupportsCancellation = true };
+            BackgroundWorker bw = new BackgroundWorker();
             if (SynchronizationContext.Current == null)
             {
                 SynchronizationContext.SetSynchronizationContext(new WindowsFormsSynchronizationContext());
@@ -69,7 +101,7 @@ namespace LNDExcel
         private void bw_GetInfo_Completed(object sender, RunWorkerCompletedEventArgs e)
         {
             var response = (GetInfoResponse)e.Result;
-            _excelAddIn.PopulateVerticalTable(SheetNames.GetInfo, GetInfoResponse.Descriptor, response);
+            _excelAddIn.PopulateVerticalTable("", SheetNames.GetInfo, GetInfoResponse.Descriptor, response);
         }
 
         public void Refresh<TResponse, TData>(string sheetName, MessageDescriptor messageDescriptor, string propertyName, Func<IMessage> query)
@@ -95,7 +127,7 @@ namespace LNDExcel
         {
             var response = (T)e.Result;
             var data = (RepeatedField<T2>) response.GetType().GetProperty(propertyName)?.GetValue(response, null);
-            _excelAddIn.PopulateTable(sheetName, messageDescriptor, data);
+            _excelAddIn.PopulateTable("", sheetName, messageDescriptor, data);
         }
     }
 }

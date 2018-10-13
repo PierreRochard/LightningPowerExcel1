@@ -22,9 +22,6 @@ namespace LNDExcel
     {
         public LndClient()
         {
-            var lndDataPath = LndDataPath;
-            var channel = RpcChannel;
-
             try
             {
                 UnlockWalletResponse response = UnlockWallet("test_password");
@@ -127,7 +124,8 @@ namespace LNDExcel
         public SendResponse SendPayment(string paymentRequest)
         {
             SendRequest request = new SendRequest {PaymentRequest = paymentRequest};
-            SendResponse response = GetLightningClient().SendPaymentSync(request);
+            var deadline = DateTime.UtcNow.AddSeconds(30);
+            SendResponse response = GetLightningClient().SendPaymentSync(request, deadline: deadline);
             return response;
         }
 

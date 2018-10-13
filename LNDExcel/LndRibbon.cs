@@ -21,42 +21,6 @@ namespace LNDExcel
 
         }
 
-        private void editBox1_TextChanged(object sender, RibbonControlEventArgs e)
-        {
-            var input = editBox1.Text;
-            if (input.Length == 0)
-            {
-                return;
-            }
-
-            PayReq paymentRequest;
-            try
-            {
-                paymentRequest = Globals.ThisAddIn.LApp.LndClient.DecodePaymentRequest(input);
-            }
-            catch (RpcException rpcException)
-            {
-                MessageBox.Show(rpcException.Status.Detail, "", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            string message = "";
-            foreach (var field in PayReq.Descriptor.Fields.InDeclarationOrder())
-            {
-                var fieldName = field.Name.Replace("_", " ");
-                fieldName = Thread.CurrentThread.CurrentCulture.TextInfo.ToTitleCase(fieldName);
-                message += $"{fieldName}: {field.Accessor.GetValue(paymentRequest)}\n";
-            }
-            var result = MessageBox.Show(message, "Send payment?", MessageBoxButtons.YesNo);
-            if (result == DialogResult.Yes)
-            {
-                Globals.ThisAddIn.LApp.LndClient.SendPayment(input);
-            }
-
-            editBox1.Text = "";
-            Globals.ThisAddIn.LApp.Refresh(SheetNames.Payments);
-        }
-
         private void connectLnd2_Click(object sender, RibbonControlEventArgs e)
         {
             Application app;
