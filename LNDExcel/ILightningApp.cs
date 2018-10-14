@@ -11,18 +11,18 @@ using Lnrpc;
 
 namespace LNDExcel
 {
-    public interface ILightningApp
+    public interface IAsyncLightningApp
     {
         void RefreshGetInfo();
     }
 
-    public class LightningApp: ILightningApp
+    public class AsyncLightningApp: IAsyncLightningApp
     {
 
         public readonly LndClient LndClient;
         private readonly ThisAddIn _excelAddIn;
 
-        public LightningApp(ThisAddIn excelAddIn)
+        public AsyncLightningApp(ThisAddIn excelAddIn)
         {
             LndClient = new LndClient();
             _excelAddIn = excelAddIn;

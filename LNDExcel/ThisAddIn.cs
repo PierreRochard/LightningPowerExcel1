@@ -10,7 +10,7 @@ namespace LNDExcel
     public partial class ThisAddIn
     {
 
-        public LightningApp LApp;
+        public AsyncLightningApp LApp;
         public SendPaymentSheet SendPaymentSheet;
 
         private void ThisAddIn_Startup(object sender, EventArgs e)
@@ -46,7 +46,7 @@ namespace LNDExcel
 
         public void ConnectLnd()
         {
-            this.LApp = new LightningApp(this);
+            this.LApp = new AsyncLightningApp(this);
             SetupSheet(SheetNames.GetInfo);
             MarkLndExcelWorkbook();
             SetupSheet(SheetNames.Channels);
