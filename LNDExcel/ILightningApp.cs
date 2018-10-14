@@ -1,13 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading;
 using System.Windows.Forms;
+
 using Google.Protobuf;
 using Google.Protobuf.Collections;
 using Google.Protobuf.Reflection;
+
 using Lnrpc;
-using LNDExcel;
 
 namespace LNDExcel
 {
@@ -49,7 +49,7 @@ namespace LNDExcel
 
         public void SendPayment(string paymentRequest)
         {
-            _excelAddIn.MarkSendingPayment();
+            _excelAddIn.SendPaymentSheet.MarkSendingPayment();
             BackgroundWorker bw = new BackgroundWorker();
             if (SynchronizationContext.Current == null)
             {
@@ -76,12 +76,12 @@ namespace LNDExcel
         private void bw_SendPayment_Completed(object sender, RunWorkerCompletedEventArgs e)
         {
             var response = (SendResponse)e.Result;
-            _excelAddIn.PopulateSendPaymentResponse(response);
+            _excelAddIn.SendPaymentSheet.PopulateSendPaymentResponse(response);
         }
 
         public void RefreshGetInfo()
         {
-            _excelAddIn.MarkAsLoadingVerticalTable(SheetNames.GetInfo, GetInfoResponse.Descriptor);
+            Tables.MarkAsLoadingVerticalTable(_excelAddIn.Application.Sheets[SheetNames.GetInfo], GetInfoResponse.Descriptor);
 
             BackgroundWorker bw = new BackgroundWorker();
             if (SynchronizationContext.Current == null)
@@ -101,12 +101,12 @@ namespace LNDExcel
         private void bw_GetInfo_Completed(object sender, RunWorkerCompletedEventArgs e)
         {
             var response = (GetInfoResponse)e.Result;
-            _excelAddIn.PopulateVerticalTable("", SheetNames.GetInfo, GetInfoResponse.Descriptor, response);
+            Tables.PopulateVerticalTable(_excelAddIn.Application.Sheets[SheetNames.GetInfo], "LND Info", GetInfoResponse.Descriptor, response);
         }
 
         public void Refresh<TResponse, TData>(string sheetName, MessageDescriptor messageDescriptor, string propertyName, Func<IMessage> query)
         {
-            _excelAddIn.MarkAsLoadingTable(sheetName, messageDescriptor);
+            Tables.MarkAsLoadingTable(_excelAddIn.Application.Sheets[sheetName], messageDescriptor);
 
             BackgroundWorker bw = new BackgroundWorker();
             if (SynchronizationContext.Current == null)
@@ -127,7 +127,7 @@ namespace LNDExcel
         {
             var response = (T)e.Result;
             var data = (RepeatedField<T2>) response.GetType().GetProperty(propertyName)?.GetValue(response, null);
-            _excelAddIn.PopulateTable("", sheetName, messageDescriptor, data);
+            Tables.PopulateTable(_excelAddIn.Application.Sheets[sheetName], "", messageDescriptor, data);
         }
     }
 }
