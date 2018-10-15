@@ -1,13 +1,16 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
-
 using Google.Protobuf;
 using Google.Protobuf.Collections;
 using Google.Protobuf.Reflection;
-
+using Grpc.Core;
+using Grpc.Core.Utils;
 using Lnrpc;
+using Channel = Lnrpc.Channel;
 
 namespace LNDExcel
 {
@@ -49,34 +52,67 @@ namespace LNDExcel
 
         public void SendPayment(string paymentRequest)
         {
-            _excelAddIn.SendPaymentSheet.MarkSendingPayment();
-            BackgroundWorker bw = new BackgroundWorker();
+            BackgroundWorker bw = new BackgroundWorker {WorkerReportsProgress = true};
             if (SynchronizationContext.Current == null)
             {
                 SynchronizationContext.SetSynchronizationContext(new WindowsFormsSynchronizationContext());
             }
-            bw.DoWork += (o, args) => bw_SendPayment(o, args, paymentRequest);
-            bw.RunWorkerCompleted += bw_SendPayment_Completed;
+
+            int timeout = 30;
+            bw.DoWork += (o, args) => BwSendPayment(o, args, paymentRequest, timeout);
+            bw.ProgressChanged += BwSendPaymentOnProgressChanged;
+            bw.RunWorkerCompleted += BwSendPayment_Completed;
+            _excelAddIn.SendPaymentSheet.MarkSendingPayment();
             bw.RunWorkerAsync();
         }
 
-        private void bw_SendPayment(object sender, DoWorkEventArgs e, string paymentRequest)
+        private void BwSendPaymentOnProgressChanged(object sender, ProgressChangedEventArgs e)
         {
-            try
+            _excelAddIn.SendPaymentSheet.UpdateSendPaymentProgress(e.ProgressPercentage);
+        }
+
+        private void BwSendPayment(object sender, DoWorkEventArgs e, string paymentRequest, int timeout)
+        {
+            if (sender != null)
             {
-                e.Result = LndClient.SendPayment(paymentRequest);
-            }
-            catch (Exception exception)
-            {
-                Console.WriteLine(exception);
-                throw;
+                e.Result = ProgressSend(sender, paymentRequest, timeout).GetAwaiter().GetResult();
             }
         }
 
-        private void bw_SendPayment_Completed(object sender, RunWorkerCompletedEventArgs e)
+        private async Task<SendResponse> ProgressSend(object sender, string paymentRequest, int timeout)
         {
-            var response = (SendResponse)e.Result;
-            _excelAddIn.SendPaymentSheet.PopulateSendPaymentResponse(response);
+            Task<SendResponse> sendTask = SendPaymentAsync(sender, paymentRequest, timeout);
+            int i = 0;
+            while (!sendTask.IsCompleted)
+            {
+                await Task.Delay(1000);
+                i++;
+                ((BackgroundWorker)sender).ReportProgress((int)(i * 100.0 / timeout));
+            }
+
+            return await sendTask;
+        }
+
+        private async Task<SendResponse> SendPaymentAsync(object sender, string paymentRequest, int timeout)
+        {
+            IAsyncStreamReader<SendResponse> stream = LndClient.SendPayment(paymentRequest, timeout);
+
+            await stream.MoveNext(CancellationToken.None);
+            return stream.Current;
+        }
+
+        private void BwSendPayment_Completed(object sender, RunWorkerCompletedEventArgs e)
+        {
+            if (e.Error == null && e.Result != null)
+            {
+                var response = (SendResponse)e.Result;
+                _excelAddIn.SendPaymentSheet.PopulateSendPaymentResponse(response);
+            }
+            else if (e.Error != null)
+            {
+                var response = (RpcException)e.Error;
+                _excelAddIn.SendPaymentSheet.PopulateSendPaymentError(response);
+            }
         }
 
         public void RefreshGetInfo()

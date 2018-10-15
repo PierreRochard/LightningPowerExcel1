@@ -20,6 +20,7 @@ namespace LNDExcel
 
     public class LndClient : ILndClient
     {
+
         public LndClient()
         {
             try
@@ -39,6 +40,7 @@ namespace LNDExcel
                     throw;
                 }
             }
+
         }
 
         private Lightning.LightningClient GetLightningClient()
@@ -119,9 +121,18 @@ namespace LNDExcel
             ListChannelsRequest request = new ListChannelsRequest();
             ListChannelsResponse response = GetLightningClient().ListChannels(request);
             return response;
+        } 
+
+        public IAsyncStreamReader<SendResponse> SendPayment(string paymentRequest, int timeout)
+        {
+            var deadline = DateTime.UtcNow.AddSeconds(timeout);
+            var duplexPaymentStreaming = GetLightningClient().SendPayment(Metadata.Empty, deadline, CancellationToken.None);
+            SendRequest request = new SendRequest { PaymentRequest = paymentRequest };
+            duplexPaymentStreaming.RequestStream.WriteAsync(request);
+            return duplexPaymentStreaming.ResponseStream;
         }
 
-        public SendResponse SendPayment(string paymentRequest)
+        public SendResponse SyncSendPayment(string paymentRequest)
         {
             SendRequest request = new SendRequest {PaymentRequest = paymentRequest};
             var deadline = DateTime.UtcNow.AddSeconds(30);

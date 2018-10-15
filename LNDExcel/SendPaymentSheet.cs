@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Drawing;
-
+using System.Threading;
 using Microsoft.Office.Interop.Excel;
 
 using Grpc.Core;
@@ -51,7 +51,7 @@ namespace LNDExcel
             _payReqLabelCell.Font.Bold = true;
             _payReqLabelCell.Columns.AutoFit();
 
-            _payReqInputCell = Ws.Range[_startRow, _startColumn + 1];
+            _payReqInputCell = Ws.Cells[_startRow, _startColumn + 1];
 
             _payReqInputRange = Ws.Range[_payReqInputCell, "U2"];
             _payReqInputRange.Interior.Color = Color.AliceBlue;
@@ -68,13 +68,17 @@ namespace LNDExcel
 
             Microsoft.Office.Tools.Excel.Controls.Button sendButton = Utilities.CreateButton("sendPayment", Ws, Ws.Cells[_sendPaymentButtonRow, 2]);
             sendButton.Click += SendPaymentButtonOnClick;
-            _payReqInputCell.Columns.ColumnWidth = _payReqColumnWidth;
 
             _sendStatusRange = Ws.Cells[_sendPaymentButtonRow + 1, _startColumn];
             _sendStatusRange.Font.Italic = true;
 
             _paymentPreimageLabel = Ws.Cells[_paymentResponseDataStartRow, _startColumn + 1];
             _paymentPreimageCell = Ws.Cells[_paymentResponseDataStartRow + 1, _startColumn + 1];
+
+            Tables.PopulateVerticalTable(Ws, "Payment Summary", Route.Descriptor, null, _paymentResponseDataStartRow + 3);
+            Tables.PopulateTable<Hop>(Ws, "Route", Hop.Descriptor, null, _paymentResponseDataStartRow + 12);
+
+            _payReqInputCell.Columns.ColumnWidth = _payReqColumnWidth;
         }
 
 
@@ -105,6 +109,9 @@ namespace LNDExcel
             }
             Tables.PopulateVerticalTable(Ws, "Decoded Payment Request", PayReq.Descriptor, response, _payReqDataStartRow);
 
+            _errorData.Value2 = "";
+            _errorDataLabel.Value2 = "";
+
             _payReqInputCell.Columns.ColumnWidth = _payReqColumnWidth;
         }
 
@@ -133,16 +140,26 @@ namespace LNDExcel
 
         public void MarkSendingPayment()
         {
+
             // Indicate payment is being sent below send button
-            _sendStatusRange.Value2 = "Sending payment...";
+            _sendStatusRange.Value2 = $"Sending payment...";
 
             // Clear payment response
             _paymentPreimageCell.Value2 = "";
             Tables.PopulateVerticalTable(Ws, "Payment Summary", Route.Descriptor, null, _paymentResponseDataStartRow + 3);
             Tables.PopulateTable<Hop>(Ws, "Route", Hop.Descriptor, null, _paymentResponseDataStartRow + 12);
             _payReqInputCell.Columns.ColumnWidth = _payReqColumnWidth;
+
+            _errorData.Value2 = "";
+            _errorDataLabel.Value2 = "";
+
         }
 
+        public void PopulateSendPaymentError(RpcException exception)
+        {
+            _errorData.Value2 = exception.Status.Detail;
+            _sendStatusRange.Value2 = "";
+        }
 
         public void PopulateSendPaymentResponse(SendResponse response)
         {
@@ -166,6 +183,12 @@ namespace LNDExcel
 
             _sendStatusRange.Value2 = "";
             _payReqInputCell.Columns.ColumnWidth = _payReqColumnWidth;
+        }
+
+        public void UpdateSendPaymentProgress(int progress)
+        {
+            // Indicate payment is being sent below send button
+            _sendStatusRange.Value2 = $"Sending payment...{progress}%";
         }
     }
 }

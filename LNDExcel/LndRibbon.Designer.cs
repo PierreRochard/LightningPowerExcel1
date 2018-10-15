@@ -37,10 +37,10 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(LndRibbon));
             this.tab1 = this.Factory.CreateRibbonTab();
             this.group2 = this.Factory.CreateRibbonGroup();
-            this.group3 = this.Factory.CreateRibbonGroup();
-            this.editBox2 = this.Factory.CreateRibbonEditBox();
             this.connectLnd2 = this.Factory.CreateRibbonButton();
+            this.group3 = this.Factory.CreateRibbonGroup();
             this.button1 = this.Factory.CreateRibbonButton();
+            this.editBox2 = this.Factory.CreateRibbonEditBox();
             this.tab1.SuspendLayout();
             this.group2.SuspendLayout();
             this.group3.SuspendLayout();
@@ -59,21 +59,6 @@
             this.group2.Label = "LND";
             this.group2.Name = "group2";
             // 
-            // group3
-            // 
-            this.group3.Items.Add(this.button1);
-            this.group3.Items.Add(this.editBox2);
-            this.group3.Label = "Bitcoin";
-            this.group3.Name = "group3";
-            // 
-            // editBox2
-            // 
-            this.editBox2.Label = "New Address:";
-            this.editBox2.Name = "editBox2";
-            this.editBox2.SizeString = "paddingtb1q0tt3rdscteaftam3rktfg37at27qtdctlree7g";
-            this.editBox2.Text = null;
-            this.editBox2.TextChanged += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.editBox2_TextChanged);
-            // 
             // connectLnd2
             // 
             this.connectLnd2.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
@@ -83,12 +68,27 @@
             this.connectLnd2.ShowImage = true;
             this.connectLnd2.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.connectLnd2_Click);
             // 
+            // group3
+            // 
+            this.group3.Items.Add(this.button1);
+            this.group3.Items.Add(this.editBox2);
+            this.group3.Label = "Bitcoin";
+            this.group3.Name = "group3";
+            // 
             // button1
             // 
             this.button1.Description = "Generate New Address";
             this.button1.Label = "Generate New Address";
             this.button1.Name = "button1";
             this.button1.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.button1_Click);
+            // 
+            // editBox2
+            // 
+            this.editBox2.Label = "New Address:";
+            this.editBox2.Name = "editBox2";
+            this.editBox2.SizeString = "paddingtb1q0tt3rdscteaftam3rktfg37at27qtdctlree7g";
+            this.editBox2.Text = null;
+            this.editBox2.TextChanged += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.editBox2_TextChanged);
             // 
             // LndRibbon
             // 
