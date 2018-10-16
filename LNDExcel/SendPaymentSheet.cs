@@ -34,6 +34,7 @@ namespace LNDExcel
 
         private int _payReqDataStartRow = 4;
         private int _sendPaymentButtonRow = 16;
+        private int _clearPaymentInfoButtonRow = 18;
         private int _paymentResponseDataStartRow = 20;
 
         private int _payReqColumnWidth = 70;
@@ -61,26 +62,75 @@ namespace LNDExcel
 
             Ws.Change += WsOnChangeParsePayReq;
 
-            Tables.PopulateVerticalTable(Ws, "Decoded Payment Request", PayReq.Descriptor, null, _payReqDataStartRow);
+            Tables.SetupVerticalTable(Ws, "Decoded Payment Request", PayReq.Descriptor, null, _payReqDataStartRow);
 
             _errorDataLabel = Ws.Cells[_paymentResponseDataStartRow, _startColumn];
             _errorData = Ws.Cells[_paymentResponseDataStartRow + 1, _startColumn];
 
-            Microsoft.Office.Tools.Excel.Controls.Button sendButton = Utilities.CreateButton("sendPayment", Ws, Ws.Cells[_sendPaymentButtonRow, 2]);
-            sendButton.Click += SendPaymentButtonOnClick;
+            Microsoft.Office.Tools.Excel.Controls.Button sendPaymentButton = Utilities.CreateButton("sendPayment", Ws, Ws.Cells[_sendPaymentButtonRow, _startColumn], "Send Payment");
+            sendPaymentButton.Click += SendPaymentButtonOnClick;
+            
+            Microsoft.Office.Tools.Excel.Controls.Button clearPaymentInfoButton = Utilities.CreateButton("clearPaymentInfo", Ws, Ws.Cells[_clearPaymentInfoButtonRow, _startColumn], "Clear");
+            clearPaymentInfoButton.Click += ClearPaymentInfoButtonOnClick;
 
             _sendStatusRange = Ws.Cells[_sendPaymentButtonRow + 1, _startColumn];
             _sendStatusRange.Font.Italic = true;
 
             _paymentPreimageLabel = Ws.Cells[_paymentResponseDataStartRow, _startColumn + 1];
-            _paymentPreimageCell = Ws.Cells[_paymentResponseDataStartRow + 1, _startColumn + 1];
+            _paymentPreimageLabel.Value2 = "Proof of Payment";
+            _paymentPreimageLabel.Font.Italic = true;
 
-            Tables.PopulateVerticalTable(Ws, "Payment Summary", Route.Descriptor, null, _paymentResponseDataStartRow + 3);
-            Tables.PopulateTable<Hop>(Ws, "Route", Hop.Descriptor, null, _paymentResponseDataStartRow + 12);
+            _paymentPreimageCell = Ws.Cells[_paymentResponseDataStartRow + 1, _startColumn + 1];
+            _paymentPreimageCell.Interior.Color = Color.PaleGreen;
+            
+            Tables.SetupVerticalTable(Ws, "Payment Summary", Route.Descriptor, null, _paymentResponseDataStartRow + 3);
+            Tables.SetupTable<Hop>(Ws, "Route", Hop.Descriptor, null, _paymentResponseDataStartRow + 12);
 
             _payReqInputCell.Columns.ColumnWidth = _payReqColumnWidth;
         }
 
+
+        private void ClearPaymentInfoButtonOnClick(object sender, EventArgs e)
+        {
+            ClearPayReq();
+            ClearParsedPayReq();
+            ClearSendStatus();
+            ClearErrorData();
+            ClearSendPaymentResponseData();
+        }
+
+        private void ClearPayReq()
+        {
+            _payReqInputCell.Value2 = "";
+        }
+
+        private void ClearParsedPayReq()
+        {
+            Tables.ClearVerticalTable(Ws, PayReq.Descriptor, _payReqDataStartRow);
+        }
+
+        private void ClearErrorData()
+        {
+            _errorData.Value2 = "";
+            _errorDataLabel.Value2 = "";
+        }
+
+        private void ClearSendStatus()
+        {
+            _sendStatusRange.Value2 = "";
+        }
+
+        private void ClearSendPaymentResponseData()
+        {
+            _paymentPreimageCell.Value2 = "";
+            Tables.ClearTable(Ws, Route.Descriptor, _paymentResponseDataStartRow + 3);
+            Tables.ClearTable(Ws, Hop.Descriptor, _paymentResponseDataStartRow + 12);
+        }
+
+        private void DisplayError(string errorType, string errorMessage)
+        {
+            _errorData.Value2 = $"{errorType}: {errorMessage}";
+        }
 
         private void WsOnChangeParsePayReq(Range target)
         {
@@ -103,14 +153,12 @@ namespace LNDExcel
             }
             catch (RpcException rpcException)
             {
-                _errorDataLabel.Value2 = "Parsing error:";
-                _errorData.Value2 = rpcException.Status.Detail;
+                DisplayError("Parsing error", rpcException.Status.Detail);
                 return;
             }
-            Tables.PopulateVerticalTable(Ws, "Decoded Payment Request", PayReq.Descriptor, response, _payReqDataStartRow);
+            Tables.PopulateVerticalTable(Ws, PayReq.Descriptor, response, _payReqDataStartRow);
 
-            _errorData.Value2 = "";
-            _errorDataLabel.Value2 = "";
+            ClearErrorData();
 
             _payReqInputCell.Columns.ColumnWidth = _payReqColumnWidth;
         }
@@ -132,27 +180,17 @@ namespace LNDExcel
             }
             catch (RpcException rpcException)
             {
-                _errorDataLabel.Value2 = "Payment error:";
-                _errorData.Value2 = rpcException.Status.Detail;
+                DisplayError("Payment error", rpcException.Status.Detail);
                 return;
             }
         }
 
         public void MarkSendingPayment()
         {
-
+            ClearSendPaymentResponseData();
+            ClearErrorData();
             // Indicate payment is being sent below send button
             _sendStatusRange.Value2 = $"Sending payment...";
-
-            // Clear payment response
-            _paymentPreimageCell.Value2 = "";
-            Tables.PopulateVerticalTable(Ws, "Payment Summary", Route.Descriptor, null, _paymentResponseDataStartRow + 3);
-            Tables.PopulateTable<Hop>(Ws, "Route", Hop.Descriptor, null, _paymentResponseDataStartRow + 12);
-            _payReqInputCell.Columns.ColumnWidth = _payReqColumnWidth;
-
-            _errorData.Value2 = "";
-            _errorDataLabel.Value2 = "";
-
         }
 
         public void PopulateSendPaymentError(RpcException exception)
@@ -163,26 +201,19 @@ namespace LNDExcel
 
         public void PopulateSendPaymentResponse(SendResponse response)
         {
+            ClearSendStatus();
             if (response.PaymentError == "")
             {
-                _paymentPreimageLabel.Value2 = "Proof of Payment";
-                _paymentPreimageLabel.Font.Italic = true;
                 _paymentPreimageCell.Value2 = BitConverter.ToString(response.PaymentPreimage.ToByteArray()).Replace("-", "").ToLower();
-                _paymentPreimageCell.Interior.Color = Color.PaleGreen;
 
-                Tables.PopulateVerticalTable(Ws, "Payment Summary", Route.Descriptor, response.PaymentRoute, _paymentResponseDataStartRow + 3);
-                Tables.PopulateTable(Ws, "Route", Hop.Descriptor, response.PaymentRoute.Hops, _paymentResponseDataStartRow + 12);
+                Tables.PopulateVerticalTable(Ws, Route.Descriptor, response.PaymentRoute, _paymentResponseDataStartRow + 3);
+                Tables.PopulateTable(Ws, Hop.Descriptor, response.PaymentRoute.Hops, _paymentResponseDataStartRow + 12);
             }
             else
             {
-                _errorDataLabel.Value2 = "Payment error:";
-                _errorData.Value2 = response.PaymentError;
+                DisplayError("Payment error", response.PaymentError);
             }
-
             Utilities.EnableButton(Ws, "sendPayment", true);
-
-            _sendStatusRange.Value2 = "";
-            _payReqInputCell.Columns.ColumnWidth = _payReqColumnWidth;
         }
 
         public void UpdateSendPaymentProgress(int progress)

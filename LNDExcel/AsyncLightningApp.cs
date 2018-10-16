@@ -137,7 +137,7 @@ namespace LNDExcel
         private void bw_GetInfo_Completed(object sender, RunWorkerCompletedEventArgs e)
         {
             var response = (GetInfoResponse)e.Result;
-            Tables.PopulateVerticalTable(_excelAddIn.Application.Sheets[SheetNames.GetInfo], "LND Info", GetInfoResponse.Descriptor, response);
+            Tables.SetupVerticalTable(_excelAddIn.Application.Sheets[SheetNames.GetInfo], "LND Info", GetInfoResponse.Descriptor, response);
         }
 
         public void Refresh<TResponse, TData>(string sheetName, MessageDescriptor messageDescriptor, string propertyName, Func<IMessage> query)
@@ -163,7 +163,7 @@ namespace LNDExcel
         {
             var response = (T)e.Result;
             var data = (RepeatedField<T2>) response.GetType().GetProperty(propertyName)?.GetValue(response, null);
-            Tables.PopulateTable(_excelAddIn.Application.Sheets[sheetName], "", messageDescriptor, data);
+            Tables.SetupTable(_excelAddIn.Application.Sheets[sheetName], "", messageDescriptor, data);
         }
     }
 }

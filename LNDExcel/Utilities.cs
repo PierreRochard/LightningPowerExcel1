@@ -18,12 +18,12 @@ namespace LNDExcel
         }
 
 
-        public static Microsoft.Office.Tools.Excel.Controls.Button CreateButton(string buttonName, Worksheet ws, Range selection)
+        public static Microsoft.Office.Tools.Excel.Controls.Button CreateButton(string buttonName, Worksheet ws, Range selection, string buttonText)
         {
             var button = new Microsoft.Office.Tools.Excel.Controls.Button();
             var worksheet = Globals.Factory.GetVstoObject(ws);
             worksheet.Controls.AddControl(button, selection, buttonName);
-            button.Text = @"Send Payment";
+            button.Text = buttonText;
             return button;
         }
 

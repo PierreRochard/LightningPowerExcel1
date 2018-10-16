@@ -21,7 +21,76 @@ namespace LNDExcel
             dataRange.Interior.Color = Color.LightGray;
         }
 
-        public static void PopulateTable<T>(Worksheet ws, string tableTitle, MessageDescriptor messageDescriptor, RepeatedField<T> responseData = null, int startRow = 2, int startColumn = 2)
+        public static void ClearTable(Worksheet ws, MessageDescriptor messageDescriptor, int startRow = 2,
+            int startColumn = 2)
+        {
+            IList<FieldDescriptor> fields = messageDescriptor.Fields.InDeclarationOrder();
+            var endColumn = fields.Count + 1;
+
+            // Skip the title
+            startRow++;
+
+            // Skip the table headers
+            startRow++;
+
+            // Find the last row in the table
+            var endRow = startRow;
+            Range lastCell = ws.Cells[endRow, startColumn];
+            while (!string.IsNullOrWhiteSpace(lastCell.Value2))
+            {
+                endRow++;
+                lastCell = ws.Cells[endRow, startColumn];
+            }
+
+            var dataRange = ws.Range[ws.Cells[startRow, startColumn], ws.Cells[endRow, endColumn]];
+            dataRange.Clear();
+        }
+
+        public static void PopulateTable<T>(Worksheet ws, MessageDescriptor messageDescriptor, RepeatedField<T> responseData, int startRow = 2, int startColumn = 2)
+        {
+            IList<FieldDescriptor> fields = messageDescriptor.Fields.InDeclarationOrder();
+
+            // Skip title
+            startRow++;
+            
+            // Skip header
+            startRow++;
+
+            for (var rowI = 0; rowI < responseData.Count; rowI++)
+            {
+                var rowNumber = rowI + startRow;
+                for (var colJ = 0; colJ < fields.Count; colJ++)
+                {
+                    var field = fields[colJ];
+                    var colNumber = colJ + 2;
+                    var dataCell = ws.Cells[rowNumber, colNumber];
+
+                    string value = "";
+                    
+                    T data = responseData[rowI];
+                    if (field.IsRepeated && field.FieldType != FieldType.Message)
+                    {
+                        var items = (RepeatedField<string>)fields[colJ].Accessor.GetValue(data as IMessage);
+                        for (int i = 0; i < items.Count; i++)
+                        {
+                            value += items[i];
+                            if (i < items.Count - 1)
+                            {
+                                value += ",\n";
+                            }
+                        }
+                    }
+                    else
+                    {
+                        value = fields[colJ].Accessor.GetValue(data as IMessage).ToString();
+                    }
+                    
+                    dataCell.Value2 = value;
+                }
+            }
+        }
+
+        public static void SetupTable<T>(Worksheet ws, string tableTitle, MessageDescriptor messageDescriptor, RepeatedField<T> responseData = null, int startRow = 2, int startColumn = 2)
         {
             IList<FieldDescriptor> fields = messageDescriptor.Fields.InDeclarationOrder();
 
@@ -127,7 +196,7 @@ namespace LNDExcel
             dataRange.Columns.AutoFit();
         }
 
-        public static void PopulateVerticalTable(Worksheet ws, string tableTitle, MessageDescriptor messageDescriptor, IMessage message = null, int startRow = 2, int startColumn = 2)
+        public static void SetupVerticalTable(Worksheet ws, string tableTitle, MessageDescriptor messageDescriptor, IMessage message = null, int startRow = 2, int startColumn = 2)
         {
             int endColumn = startColumn + 1;
 
@@ -172,6 +241,40 @@ namespace LNDExcel
             }
 
             ws.Range["A:D"].Columns.AutoFit();
+        }
+
+        public static void PopulateVerticalTable(Worksheet ws, MessageDescriptor messageDescriptor, IMessage message, int startRow = 2, int startColumn = 2)
+        {
+            int endColumn = startColumn + 1;
+
+            // Skip title
+            startRow++;
+
+            int dataRow = startRow;
+            IList<FieldDescriptor> fields = messageDescriptor.Fields.InDeclarationOrder();
+            foreach (var field in fields)
+            {
+                if (field.IsRepeated)
+                {
+                    continue;
+                }
+                ws.Cells[dataRow, endColumn].Value2 = message != null ? field.Accessor.GetValue(message).ToString() : "";
+                
+                dataRow++;
+            }
+        }
+
+        public static void ClearVerticalTable(Worksheet ws, MessageDescriptor messageDescriptor, int startRow = 2,
+            int startColumn = 2)
+        {
+            // Skip the title
+            startRow++;
+
+            IList<FieldDescriptor> fields = messageDescriptor.Fields.InDeclarationOrder();
+            var endRow = startRow + fields.Count;
+            var dataColumn = startColumn + 1;
+            var dataRange = ws.Range[ws.Cells[startRow, dataColumn], ws.Cells[endRow, dataColumn]];
+            dataRange.Clear();
         }
     }
 }
