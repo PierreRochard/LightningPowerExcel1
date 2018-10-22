@@ -36,14 +36,14 @@ namespace LNDExcel
             // Find the last row in the table
             var endRow = startRow;
             Range lastCell = ws.Cells[endRow, startColumn];
-            while (!string.IsNullOrWhiteSpace(lastCell.Value2))
+            while (lastCell.Value2 != null && !string.IsNullOrWhiteSpace(lastCell.Value2.ToString()))
             {
                 endRow++;
                 lastCell = ws.Cells[endRow, startColumn];
             }
 
             var dataRange = ws.Range[ws.Cells[startRow, startColumn], ws.Cells[endRow, endColumn]];
-            dataRange.Clear();
+            dataRange.ClearContents();
         }
 
         public static void PopulateTable<T>(Worksheet ws, MessageDescriptor messageDescriptor, RepeatedField<T> responseData, int startRow = 2, int startColumn = 2)
@@ -86,6 +86,15 @@ namespace LNDExcel
                     }
                     
                     dataCell.Value2 = value;
+                    if (rowI > 1)
+                    {
+                        Formatting.TableDataCell(dataCell);
+                    }
+                }
+
+                if (rowI > 1)
+                {
+                    Formatting.TableDataRow(ws.Range[ws.Cells[rowNumber, startColumn], ws.Cells[rowNumber, fields.Count + 1]], rowI % 2 == 0);
                 }
             }
         }
@@ -103,17 +112,12 @@ namespace LNDExcel
             startRow++;
 
             var dataRange = ws.Range[ws.Cells[startRow, startColumn], ws.Cells[100, endCol]];
-            dataRange.Clear();
+            dataRange.ClearContents();
             Formatting.RemoveBorders(dataRange);
             dataRange.Interior.Color = Color.White;
 
             Range header = ws.Range[ws.Cells[startRow, startColumn], ws.Cells[startRow, endCol]];
-            header.Interior.Color = Color.White;
-            header.Font.Bold = true;
-            header.Borders[XlBordersIndex.xlEdgeBottom].LineStyle = XlLineStyle.xlContinuous;
-            header.Borders[XlBordersIndex.xlEdgeBottom].Weight = XlBorderWeight.xlThick;
-            header.Borders[XlBordersIndex.xlEdgeTop].LineStyle = XlLineStyle.xlContinuous;
-            header.Borders[XlBordersIndex.xlEdgeTop].Weight = XlBorderWeight.xlThin;
+            Formatting.TableHeaderRow(header);
 
             for (var colJ = 0; colJ < fields.Count; colJ++)
             {
@@ -123,11 +127,7 @@ namespace LNDExcel
                 var fieldName = field.Name.Replace("_", " ");
                 fieldName = Thread.CurrentThread.CurrentCulture.TextInfo.ToTitleCase(fieldName);
                 headerCell.Value2 = fieldName;
-                headerCell.Borders[XlBordersIndex.xlEdgeRight].LineStyle = XlLineStyle.xlContinuous;
-                headerCell.Borders[XlBordersIndex.xlEdgeRight].Weight = XlBorderWeight.xlThin;
-                headerCell.Borders[XlBordersIndex.xlEdgeLeft].LineStyle = XlLineStyle.xlContinuous;
-                headerCell.Borders[XlBordersIndex.xlEdgeLeft].Weight = XlBorderWeight.xlThin;
-                headerCell.HorizontalAlignment = XlHAlign.xlHAlignCenter;
+                Formatting.TableHeaderCell(headerCell);
                 if (field.IsRepeated && field.FieldType != FieldType.Message)
                 {
                     ws.Columns[colNumber].ColumnWidth = 100;
@@ -166,19 +166,11 @@ namespace LNDExcel
                             value = fields[colJ].Accessor.GetValue(data as IMessage).ToString();
                         }
                     }
-
                     dataCell.Value2 = value;
-                    dataCell.Borders[XlBordersIndex.xlEdgeRight].LineStyle = XlLineStyle.xlContinuous;
-                    dataCell.Borders[XlBordersIndex.xlEdgeRight].Weight = XlBorderWeight.xlThin;
-                    dataCell.Borders[XlBordersIndex.xlEdgeLeft].LineStyle = XlLineStyle.xlContinuous;
-                    dataCell.Borders[XlBordersIndex.xlEdgeLeft].Weight = XlBorderWeight.xlThin;
-                    dataCell.HorizontalAlignment = XlHAlign.xlHAlignCenter;
-                    dataCell.VerticalAlignment = XlVAlign.xlVAlignCenter;
+                    Formatting.TableDataCell(dataCell);
                 }
                 Range rowRange = ws.Range[ws.Cells[rowNumber, startColumn], ws.Cells[rowNumber, endCol]];
-                rowRange.Borders[XlBordersIndex.xlEdgeBottom].LineStyle = XlLineStyle.xlContinuous;
-                rowRange.Borders[XlBordersIndex.xlEdgeBottom].Weight = XlBorderWeight.xlThin;
-                rowRange.Interior.Color = rowI % 2 == 0 ? Color.LightYellow : Color.White;
+                Formatting.TableDataRow(rowRange, rowI % 2 == 0);
             }
 
             ws.Range["A:AZ"].Columns.AutoFit();
@@ -190,7 +182,7 @@ namespace LNDExcel
             ws.Select();
             var fieldCount = messageDescriptor.Fields.InDeclarationOrder().Count;
             var dataRange = ws.Range[ws.Cells[3, 2], ws.Cells[fieldCount, 3]];
-            dataRange.Clear();
+            dataRange.ClearContents();
             ws.Cells[3, 2].Value2 = "Loading...";
             dataRange.Interior.Color = Color.LightGray;
             dataRange.Columns.AutoFit();
@@ -218,25 +210,15 @@ namespace LNDExcel
                 fieldName = Thread.CurrentThread.CurrentCulture.TextInfo.ToTitleCase(fieldName);
 
                 Range fieldNameCell = ws.Cells[dataRow, startColumn];
-                fieldNameCell.Font.Bold = true;
-                fieldNameCell.Borders[XlBordersIndex.xlEdgeRight].LineStyle = XlLineStyle.xlContinuous;
-                fieldNameCell.Borders[XlBordersIndex.xlEdgeRight].Weight = XlBorderWeight.xlThin;
+                Formatting.VerticalTableHeaderCell(fieldNameCell);
+                fieldNameCell.Value2 = fieldName;
 
                 Range fieldValueCell = ws.Cells[dataRow, endColumn];
-                fieldNameCell.Value2 = fieldName;
                 fieldValueCell.Value2 = message != null ? field.Accessor.GetValue(message).ToString() : "";
-                fieldValueCell.HorizontalAlignment = XlHAlign.xlHAlignLeft;
+                Formatting.VerticalTableDataCell(fieldValueCell);
 
                 Range row = ws.Range[fieldNameCell, fieldValueCell];
-                row.Borders[XlBordersIndex.xlEdgeTop].LineStyle = XlLineStyle.xlContinuous;
-                row.Borders[XlBordersIndex.xlEdgeTop].Weight = XlBorderWeight.xlThin;
-                row.Borders[XlBordersIndex.xlEdgeRight].LineStyle = XlLineStyle.xlContinuous;
-                row.Borders[XlBordersIndex.xlEdgeRight].Weight = XlBorderWeight.xlThin;
-                row.Borders[XlBordersIndex.xlEdgeLeft].LineStyle = XlLineStyle.xlContinuous;
-                row.Borders[XlBordersIndex.xlEdgeLeft].Weight = XlBorderWeight.xlThin;
-                row.Borders[XlBordersIndex.xlEdgeBottom].LineStyle = XlLineStyle.xlContinuous;
-                row.Borders[XlBordersIndex.xlEdgeBottom].Weight = XlBorderWeight.xlThin;
-                row.Interior.Color = dataRow % 2 == 0 ? Color.LightYellow : Color.White;
+                Formatting.VerticalTableRow(row, dataRow % 2 == 0);
                 dataRow++;
             }
 
@@ -274,7 +256,7 @@ namespace LNDExcel
             var endRow = startRow + fields.Count;
             var dataColumn = startColumn + 1;
             var dataRange = ws.Range[ws.Cells[startRow, dataColumn], ws.Cells[endRow, dataColumn]];
-            dataRange.Clear();
+            dataRange.ClearContents();
         }
     }
 }

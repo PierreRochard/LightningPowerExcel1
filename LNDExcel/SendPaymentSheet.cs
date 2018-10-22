@@ -21,7 +21,6 @@ namespace LNDExcel
         private Range _payReqInputRange;
         private Range _payReqRange;
 
-        private Range _errorDataLabel;
         private Range _errorData;
 
         private Range _sendStatusRange;
@@ -64,8 +63,7 @@ namespace LNDExcel
 
             Tables.SetupVerticalTable(Ws, "Decoded Payment Request", PayReq.Descriptor, null, _payReqDataStartRow);
 
-            _errorDataLabel = Ws.Cells[_paymentResponseDataStartRow, _startColumn];
-            _errorData = Ws.Cells[_paymentResponseDataStartRow + 1, _startColumn];
+            _errorData = Ws.Cells[_sendPaymentButtonRow + 1, _startColumn + 1];
 
             Microsoft.Office.Tools.Excel.Controls.Button sendPaymentButton = Utilities.CreateButton("sendPayment", Ws, Ws.Cells[_sendPaymentButtonRow, _startColumn], "Send Payment");
             sendPaymentButton.Click += SendPaymentButtonOnClick;
@@ -112,7 +110,7 @@ namespace LNDExcel
         private void ClearErrorData()
         {
             _errorData.Value2 = "";
-            _errorDataLabel.Value2 = "";
+            Formatting.DeactivateErrorCell(_errorData);
         }
 
         private void ClearSendStatus()
@@ -123,13 +121,14 @@ namespace LNDExcel
         private void ClearSendPaymentResponseData()
         {
             _paymentPreimageCell.Value2 = "";
-            Tables.ClearTable(Ws, Route.Descriptor, _paymentResponseDataStartRow + 3);
+            Tables.ClearVerticalTable(Ws, Route.Descriptor, _paymentResponseDataStartRow + 3);
             Tables.ClearTable(Ws, Hop.Descriptor, _paymentResponseDataStartRow + 12);
         }
 
         private void DisplayError(string errorType, string errorMessage)
         {
             _errorData.Value2 = $"{errorType}: {errorMessage}";
+            Formatting.ActivateErrorCell(_errorData);
         }
 
         private void WsOnChangeParsePayReq(Range target)
