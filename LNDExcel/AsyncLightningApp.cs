@@ -1,27 +1,19 @@
 ﻿using System;
 using System.ComponentModel;
-using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Google.Protobuf;
 using Google.Protobuf.Collections;
-using Google.Protobuf.Reflection;
 using Grpc.Core;
-using Grpc.Core.Utils;
 using Lnrpc;
 using Channel = Lnrpc.Channel;
 
 namespace LNDExcel
 {
-    public interface IAsyncLightningApp
+    public class AsyncLightningApp
     {
-        void RefreshGetInfo();
-    }
-
-    public class AsyncLightningApp: IAsyncLightningApp
-    {
-
         public readonly LndClient LndClient;
         private readonly ThisAddIn _excelAddIn;
 
@@ -30,35 +22,74 @@ namespace LNDExcel
             LndClient = new LndClient();
             _excelAddIn = excelAddIn;
         }
-        
-        public void Refresh(string name)
-        {
-            switch (name)
-            {
-                case SheetNames.GetInfo:
-                    RefreshGetInfo();
-                    break;
-                case SheetNames.Channels:
-                    Refresh<ListChannelsResponse, Channel>(name, Channel.Descriptor, "Channels", LndClient.ListChannels);
-                    break;
-                case SheetNames.Payments:
-                    Refresh<ListPaymentsResponse, Payment>(name, Payment.Descriptor, "Payments", LndClient.ListPayments);
-                    break;
-                case SheetNames.SendPayment:
-                 //   _excelAddIn.SetupPaymentRequest();
-                    break;
-            }
-        }
 
-        public void SendPayment(string paymentRequest)
+        public void Refresh(string sheetName)
         {
-            BackgroundWorker bw = new BackgroundWorker {WorkerReportsProgress = true};
+
+            var bw = new BackgroundWorker();
             if (SynchronizationContext.Current == null)
             {
                 SynchronizationContext.SetSynchronizationContext(new WindowsFormsSynchronizationContext());
             }
 
-            int timeout = 30;
+            Tables.MarkAsLoadingTable(_excelAddIn.Application.Sheets[sheetName]);
+            switch (sheetName)
+            {
+                case SheetNames.GetInfo:
+                    bw.DoWork += (o, args) => BwQuery(o, args, LndClient.GetInfo);
+                    bw.RunWorkerCompleted += (o, args) => BwVerticalListCompleted(o, args, _excelAddIn.GetInfoSheet);
+                    break;
+                case SheetNames.OpenChannels:
+                    bw.DoWork += (o, args) => BwQuery(o, args, LndClient.ListChannels);
+                    bw.RunWorkerCompleted += (o, args) =>
+                        BwListCompleted<Channel, ListChannelsResponse>(o, args, _excelAddIn.ChannelsSheet);
+                    break;
+                case SheetNames.Payments:
+                    bw.DoWork += (o, args) => BwQuery(o, args, LndClient.ListPayments);
+                    bw.RunWorkerCompleted += (o, args) =>
+                        BwListCompleted<Payment, ListPaymentsResponse>(o, args, _excelAddIn.PaymentsSheet);
+                    break;
+                default:
+                    Tables.RemoveLoadingMark(_excelAddIn.Application.Sheets[sheetName]);
+                    return;
+            }
+
+            bw.RunWorkerAsync();
+        }
+
+        private static void BwQuery(object sender, DoWorkEventArgs e, Func<IMessage> query)
+        {
+            e.Result = query();
+        }
+
+        private void BwVerticalListCompleted<TResponse>(object sender, RunWorkerCompletedEventArgs e, VerticalTableSheet<TResponse> tableSheet) where TResponse : IMessage
+        {
+            var response = (TResponse)e.Result;
+            tableSheet.Update(response);
+            Tables.RemoveLoadingMark(tableSheet.Ws);
+        }
+        
+        private static void BwListCompleted<TMessage, TResponse>(object sender, RunWorkerCompletedEventArgs e,
+            TableSheet<TMessage> tableSheet) where TMessage : IMessage where TResponse : IMessage
+        {
+            var response = (TResponse)e.Result;
+            var fieldDescriptor = response.Descriptor.Fields.InDeclarationOrder().FirstOrDefault(f => f.IsRepeated);
+            if (fieldDescriptor == null) return;
+
+            var data = (RepeatedField<TMessage>)fieldDescriptor.Accessor.GetValue(response);
+            tableSheet.Update(data);
+            Tables.RemoveLoadingMark(tableSheet.Ws);
+        }
+
+        public void SendPayment(string paymentRequest)
+        {
+            var bw = new BackgroundWorker {WorkerReportsProgress = true};
+            if (SynchronizationContext.Current == null)
+            {
+                SynchronizationContext.SetSynchronizationContext(new WindowsFormsSynchronizationContext());
+            }
+
+            const int timeout = 30;
             bw.DoWork += (o, args) => BwSendPayment(o, args, paymentRequest, timeout);
             bw.ProgressChanged += BwSendPaymentOnProgressChanged;
             bw.RunWorkerCompleted += BwSendPayment_Completed;
@@ -81,8 +112,8 @@ namespace LNDExcel
 
         private async Task<SendResponse> ProgressSend(object sender, string paymentRequest, int timeout)
         {
-            Task<SendResponse> sendTask = SendPaymentAsync(sender, paymentRequest, timeout);
-            int i = 0;
+            var sendTask = SendPaymentAsync(sender, paymentRequest, timeout);
+            var i = 0;
             while (!sendTask.IsCompleted)
             {
                 await Task.Delay(1000);
@@ -95,7 +126,7 @@ namespace LNDExcel
 
         private async Task<SendResponse> SendPaymentAsync(object sender, string paymentRequest, int timeout)
         {
-            IAsyncStreamReader<SendResponse> stream = LndClient.SendPayment(paymentRequest, timeout);
+            var stream = LndClient.SendPayment(paymentRequest, timeout);
 
             await stream.MoveNext(CancellationToken.None);
             return stream.Current;
@@ -115,70 +146,6 @@ namespace LNDExcel
             }
         }
 
-        public void RefreshGetInfo()
-        {
-            Tables.MarkAsLoadingVerticalTable(_excelAddIn.Application.Sheets[SheetNames.GetInfo], GetInfoResponse.Descriptor);
 
-            BackgroundWorker bw = new BackgroundWorker();
-            if (SynchronizationContext.Current == null)
-            {
-                SynchronizationContext.SetSynchronizationContext(new WindowsFormsSynchronizationContext());
-            }
-            bw.DoWork += bw_GetInfo;
-            bw.RunWorkerCompleted += bw_GetInfo_Completed;
-            bw.RunWorkerAsync();
-        }
-
-        private void bw_GetInfo(object sender, DoWorkEventArgs e)
-        {
-            e.Result = LndClient.GetInfo();
-        }
-
-        private void bw_GetInfo_Completed(object sender, RunWorkerCompletedEventArgs e)
-        {
-            var response = (GetInfoResponse)e.Result;
-            Tables.SetupVerticalTable(_excelAddIn.Application.Sheets[SheetNames.GetInfo], "LND Info", GetInfoResponse.Descriptor, response);
-        }
-
-        public void Refresh<TResponse, TData>(string sheetName, MessageDescriptor messageDescriptor, string propertyName, Func<IMessage> query)
-        {
-            Tables.MarkAsLoadingTable(_excelAddIn.Application.Sheets[sheetName]);
-
-            BackgroundWorker bw = new BackgroundWorker();
-            if (SynchronizationContext.Current == null)
-            {
-                SynchronizationContext.SetSynchronizationContext(new WindowsFormsSynchronizationContext());
-            }
-            bw.DoWork += (o, args) => BwList(o, args, query);
-            switch (sheetName)
-            {
-                case SheetNames.Channels:
-                    bw.RunWorkerCompleted += BwListChannelsCompleted;
-                    break;
-                default:
-                    bw.RunWorkerCompleted += (o, args) => BwListCompleted<TResponse, TData>(o, args, sheetName, messageDescriptor, propertyName);
-                    break;
-            }
-            bw.RunWorkerAsync();
-        }
-
-        private void BwList(object sender, DoWorkEventArgs e, Func<IMessage> query)
-        {
-            e.Result = query();
-        }
-
-        private void BwListCompleted<T, T2>(object sender, RunWorkerCompletedEventArgs e, string sheetName, MessageDescriptor messageDescriptor, string propertyName)
-        {
-            var response = (T)e.Result;
-            var data = (RepeatedField<T2>) response.GetType().GetProperty(propertyName)?.GetValue(response, null);
-            Tables.SetupTable(_excelAddIn.Application.Sheets[sheetName], "", messageDescriptor, data);
-        }
-        
-        private void BwListChannelsCompleted(object sender, RunWorkerCompletedEventArgs e)
-        {
-            var response = (ListChannelsResponse)e.Result;
-            var data = response.Channels;
-            _excelAddIn.ChannelsSheet.Update(data);
-        }
     }
 }

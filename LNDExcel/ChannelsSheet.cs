@@ -103,7 +103,6 @@ namespace LNDExcel
                 }
 
                 dataCell.Value2 = value;
-                Formatting.TableDataCell(dataCell);
             }
             Formatting.TableDataRow(Ws.Range[Ws.Cells[lastRow, _startColumn], Ws.Cells[lastRow, _endColumn]], lastRow % 2 == 0);
         }

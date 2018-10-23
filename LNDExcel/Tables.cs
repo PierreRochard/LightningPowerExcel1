@@ -87,10 +87,6 @@ namespace LNDExcel
                     }
                     
                     dataCell.Value2 = value;
-                    if (rowI > 1)
-                    {
-                        Formatting.TableDataCell(dataCell);
-                    }
                 }
 
                 if (rowI > 1)
@@ -98,6 +94,7 @@ namespace LNDExcel
                     Formatting.TableDataRow(ws.Range[ws.Cells[rowNumber, startColumn], ws.Cells[rowNumber, fields.Count + 1]], rowI % 2 == 0);
                 }
             }
+            RemoveLoadingMark(ws);
         }
 
         public static void SetupTable<T>(Worksheet ws, string tableTitle, MessageDescriptor messageDescriptor, RepeatedField<T> responseData = null, int startRow = 2, int startColumn = 2)
@@ -128,7 +125,6 @@ namespace LNDExcel
                 var fieldName = field.Name.Replace("_", " ");
                 fieldName = Thread.CurrentThread.CurrentCulture.TextInfo.ToTitleCase(fieldName);
                 headerCell.Value2 = fieldName;
-                Formatting.TableHeaderCell(headerCell);
                 if (field.IsRepeated && field.FieldType != FieldType.Message)
                 {
                     ws.Columns[colNumber].ColumnWidth = 100;
@@ -168,25 +164,13 @@ namespace LNDExcel
                         }
                     }
                     dataCell.Value2 = value;
-                    Formatting.TableDataCell(dataCell);
                 }
                 Range rowRange = ws.Range[ws.Cells[rowNumber, startColumn], ws.Cells[rowNumber, endCol]];
                 Formatting.TableDataRow(rowRange, rowNumber % 2 == 0);
             }
-
+            RemoveLoadingMark(ws);
             ws.Range["A:AZ"].Columns.AutoFit();
             ws.Range["A:AZ"].Rows.AutoFit();
-        }
-
-        public static void MarkAsLoadingVerticalTable(Worksheet ws, MessageDescriptor messageDescriptor)
-        {
-            ws.Select();
-            var fieldCount = messageDescriptor.Fields.InDeclarationOrder().Count;
-            var dataRange = ws.Range[ws.Cells[3, 2], ws.Cells[fieldCount, 3]];
-            dataRange.ClearContents();
-            ws.Cells[3, 2].Value2 = "Loading...";
-            dataRange.Interior.Color = Color.LightGray;
-            dataRange.Columns.AutoFit();
         }
 
         public static void SetupVerticalTable(Worksheet ws, string tableTitle, MessageDescriptor messageDescriptor, IMessage message = null, int startRow = 2, int startColumn = 2)
@@ -211,12 +195,12 @@ namespace LNDExcel
                 fieldName = Thread.CurrentThread.CurrentCulture.TextInfo.ToTitleCase(fieldName);
 
                 Range fieldNameCell = ws.Cells[dataRow, startColumn];
-                Formatting.VerticalTableHeaderCell(fieldNameCell);
+                Formatting.VerticalTableHeaderColumn(fieldNameCell);
                 fieldNameCell.Value2 = fieldName;
 
                 Range fieldValueCell = ws.Cells[dataRow, endColumn];
                 fieldValueCell.Value2 = message != null ? field.Accessor.GetValue(message).ToString() : "";
-                Formatting.VerticalTableDataCell(fieldValueCell);
+                Formatting.VerticalTableDataColumn(fieldValueCell);
 
                 Range row = ws.Range[fieldNameCell, fieldValueCell];
                 Formatting.VerticalTableRow(row, dataRow % 2 == 0);
@@ -224,6 +208,7 @@ namespace LNDExcel
             }
 
             ws.Range["A:D"].Columns.AutoFit();
+            RemoveLoadingMark(ws);
         }
 
         public static void PopulateVerticalTable(Worksheet ws, MessageDescriptor messageDescriptor, IMessage message, int startRow = 2, int startColumn = 2)
@@ -245,6 +230,7 @@ namespace LNDExcel
                 
                 dataRow++;
             }
+            RemoveLoadingMark(ws);
         }
 
         public static void ClearVerticalTable(Worksheet ws, MessageDescriptor messageDescriptor, int startRow = 2,

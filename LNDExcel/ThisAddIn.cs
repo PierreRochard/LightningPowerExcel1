@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
-
+using Lnrpc;
 using Workbook = Microsoft.Office.Interop.Excel.Workbook;
 using Worksheet = Microsoft.Office.Interop.Excel.Worksheet;
 
@@ -11,8 +11,10 @@ namespace LNDExcel
     {
 
         public AsyncLightningApp LApp;
+        public VerticalTableSheet<GetInfoResponse> GetInfoSheet;
+        public TableSheet<Channel> ChannelsSheet;
+        public TableSheet<Payment> PaymentsSheet;
         public SendPaymentSheet SendPaymentSheet;
-        public ChannelsSheet ChannelsSheet;
 
         private void ThisAddIn_Startup(object sender, EventArgs e)
         {
@@ -48,19 +50,34 @@ namespace LNDExcel
         public void ConnectLnd()
         {
             this.LApp = new AsyncLightningApp(this);
-            SetupSheet(SheetNames.GetInfo);
-            MarkLndExcelWorkbook();
-            SetupSheet(SheetNames.Channels);
-            this.ChannelsSheet = new ChannelsSheet(Application.Sheets[SheetNames.Channels], this.LApp);
-            SetupSheet(SheetNames.Payments);
-            SetupSheet(SheetNames.SendPayment);
+
+            CreateSheet(SheetNames.GetInfo);
+            GetInfoSheet = new VerticalTableSheet<GetInfoResponse>(Application.Sheets[SheetNames.GetInfo], LApp, GetInfoResponse.Descriptor);
+            GetInfoSheet.SetupVerticalTable("LND Node Info");
+            LApp.Refresh(SheetNames.GetInfo);
+
+            CreateSheet(SheetNames.OpenChannels);
+            ChannelsSheet = new TableSheet<Channel>(Application.Sheets[SheetNames.OpenChannels], LApp, Channel.Descriptor, "chan_id");
+            ChannelsSheet.SetupTable("Open Channels", 3);
+            LApp.Refresh(SheetNames.OpenChannels);
+
+            CreateSheet(SheetNames.Payments);
+            PaymentsSheet = new TableSheet<Payment>(Application.Sheets[SheetNames.Payments], LApp, Payment.Descriptor, "payment_hash");
+            PaymentsSheet.SetupTable("Payments", 3);
+            LApp.Refresh(SheetNames.Payments);
+
+            CreateSheet(SheetNames.SendPayment);
             this.SendPaymentSheet = new SendPaymentSheet(Application.Sheets[SheetNames.SendPayment], this.LApp);
             SendPaymentSheet.InitializePaymentRequest();
+
+            GetInfoSheet.Ws.Activate();
+            MarkLndExcelWorkbook();
+            
             LApp.Refresh(SheetNames.GetInfo);
             Application.SheetActivate += Workbook_SheetActivate;
         }
 
-        private void SetupSheet(string worksheetName)
+        private void CreateSheet(string worksheetName)
         {
             Worksheet oldWs = Application.ActiveSheet;
             Worksheet ws;

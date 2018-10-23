@@ -214,7 +214,9 @@
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="TableSheet.cs" />
     <Compile Include="Utilities.cs" />
+    <Compile Include="VerticalTableSheet.cs" />
     <EmbeddedResource Include="NewAddressForm.resx">
       <DependentUpon>NewAddressForm.cs</DependentUpon>
     </EmbeddedResource>

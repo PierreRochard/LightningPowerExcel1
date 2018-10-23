@@ -26,12 +26,8 @@ namespace LNDExcel
             header.Interior.Color = Color.White;
             header.Font.Bold = true;
             header.HorizontalAlignment = XlHAlign.xlHAlignCenter;
-
-            header.Borders[XlBordersIndex.xlEdgeRight].LineStyle = XlLineStyle.xlContinuous;
-            header.Borders[XlBordersIndex.xlEdgeRight].Weight = XlBorderWeight.xlThin;
-
-            header.Borders[XlBordersIndex.xlEdgeLeft].LineStyle = XlLineStyle.xlContinuous;
-            header.Borders[XlBordersIndex.xlEdgeLeft].Weight = XlBorderWeight.xlThin;
+            
+            VerticalBorders(header);
 
             header.Borders[XlBordersIndex.xlEdgeBottom].LineStyle = XlLineStyle.xlContinuous;
             header.Borders[XlBordersIndex.xlEdgeBottom].Weight = XlBorderWeight.xlThick;
@@ -41,65 +37,70 @@ namespace LNDExcel
 
             header.Borders[XlBordersIndex.xlInsideHorizontal].LineStyle = XlLineStyle.xlContinuous;
             header.Borders[XlBordersIndex.xlInsideHorizontal].Weight = XlBorderWeight.xlThin;
-
-            header.Borders[XlBordersIndex.xlInsideVertical].LineStyle = XlLineStyle.xlContinuous;
-            header.Borders[XlBordersIndex.xlInsideVertical].Weight = XlBorderWeight.xlThin;
         }
 
-        public static void TableHeaderCell(Range headerCell)
+        public static void TableDataRow(Range cells, bool isEven)
         {
+            cells.HorizontalAlignment = XlHAlign.xlHAlignCenter;
+            cells.VerticalAlignment = XlVAlign.xlVAlignCenter;
+
+            cells.Borders[XlBordersIndex.xlEdgeBottom].LineStyle = XlLineStyle.xlContinuous;
+            cells.Borders[XlBordersIndex.xlEdgeBottom].Weight = XlBorderWeight.xlThin;
+
+            cells.Borders[XlBordersIndex.xlInsideHorizontal].LineStyle = XlLineStyle.xlContinuous;
+            cells.Borders[XlBordersIndex.xlInsideHorizontal].Weight = XlBorderWeight.xlThin;
+
+            VerticalBorders(cells);
+
+            cells.Interior.Color = isEven ? Color.LightYellow : Color.White;
+            cells.NumberFormat = "0";
         }
 
-        public static void TableDataCell(Range dataCell)
+        public static void VerticalBorders(Range cells)
         {
+            cells.Borders[XlBordersIndex.xlEdgeRight].LineStyle = XlLineStyle.xlContinuous;
+            cells.Borders[XlBordersIndex.xlEdgeRight].Weight = XlBorderWeight.xlThin;
+
+            cells.Borders[XlBordersIndex.xlEdgeLeft].LineStyle = XlLineStyle.xlContinuous;
+            cells.Borders[XlBordersIndex.xlEdgeLeft].Weight = XlBorderWeight.xlThin;
+
+            cells.Borders[XlBordersIndex.xlInsideVertical].LineStyle = XlLineStyle.xlContinuous;
+            cells.Borders[XlBordersIndex.xlInsideVertical].Weight = XlBorderWeight.xlThin;
         }
 
-        public static void TableDataRow(Range rowRange, bool isEven)
+        public static void AllThinBorders(Range cells)
         {
-            rowRange.HorizontalAlignment = XlHAlign.xlHAlignCenter;
-            rowRange.VerticalAlignment = XlVAlign.xlVAlignCenter;
+            cells.Borders[XlBordersIndex.xlEdgeTop].LineStyle = XlLineStyle.xlContinuous;
+            cells.Borders[XlBordersIndex.xlEdgeTop].Weight = XlBorderWeight.xlThin;
+            
+            cells.Borders[XlBordersIndex.xlEdgeBottom].LineStyle = XlLineStyle.xlContinuous;
+            cells.Borders[XlBordersIndex.xlEdgeBottom].Weight = XlBorderWeight.xlThin;
 
-            rowRange.Borders[XlBordersIndex.xlEdgeRight].LineStyle = XlLineStyle.xlContinuous;
-            rowRange.Borders[XlBordersIndex.xlEdgeRight].Weight = XlBorderWeight.xlThin;
-
-            rowRange.Borders[XlBordersIndex.xlEdgeLeft].LineStyle = XlLineStyle.xlContinuous;
-            rowRange.Borders[XlBordersIndex.xlEdgeLeft].Weight = XlBorderWeight.xlThin;
-
-            rowRange.Borders[XlBordersIndex.xlEdgeBottom].LineStyle = XlLineStyle.xlContinuous;
-            rowRange.Borders[XlBordersIndex.xlEdgeBottom].Weight = XlBorderWeight.xlThin;
-
-            rowRange.Borders[XlBordersIndex.xlInsideHorizontal].LineStyle = XlLineStyle.xlContinuous;
-            rowRange.Borders[XlBordersIndex.xlInsideHorizontal].Weight = XlBorderWeight.xlThin;
-
-            rowRange.Borders[XlBordersIndex.xlInsideVertical].LineStyle = XlLineStyle.xlContinuous;
-            rowRange.Borders[XlBordersIndex.xlInsideVertical].Weight = XlBorderWeight.xlThin;
-
-            rowRange.Interior.Color = isEven ? Color.LightYellow : Color.White;
+            cells.Borders[XlBordersIndex.xlInsideHorizontal].LineStyle = XlLineStyle.xlContinuous;
+            cells.Borders[XlBordersIndex.xlInsideHorizontal].Weight = XlBorderWeight.xlThin;
+            
+            VerticalBorders(cells);
         }
 
-        public static void VerticalTableHeaderCell(Range fieldNameCell)
+        public static void VerticalTable(Range cells)
         {
-            fieldNameCell.Font.Bold = true;
-            fieldNameCell.Borders[XlBordersIndex.xlEdgeRight].LineStyle = XlLineStyle.xlContinuous;
-            fieldNameCell.Borders[XlBordersIndex.xlEdgeRight].Weight = XlBorderWeight.xlThin;
+            AllThinBorders(cells);
         }
 
-        public static void VerticalTableDataCell(Range dataCell)
+        public static void VerticalTableHeaderColumn(Range cells)
         {
-            dataCell.HorizontalAlignment = XlHAlign.xlHAlignLeft;
+            cells.Font.Bold = true;
         }
 
-        public static void VerticalTableRow(Range row, bool isEven)
+        public static void VerticalTableDataColumn(Range cells)
         {
-            row.Borders[XlBordersIndex.xlEdgeTop].LineStyle = XlLineStyle.xlContinuous;
-            row.Borders[XlBordersIndex.xlEdgeTop].Weight = XlBorderWeight.xlThin;
-            row.Borders[XlBordersIndex.xlEdgeRight].LineStyle = XlLineStyle.xlContinuous;
-            row.Borders[XlBordersIndex.xlEdgeRight].Weight = XlBorderWeight.xlThin;
-            row.Borders[XlBordersIndex.xlEdgeLeft].LineStyle = XlLineStyle.xlContinuous;
-            row.Borders[XlBordersIndex.xlEdgeLeft].Weight = XlBorderWeight.xlThin;
-            row.Borders[XlBordersIndex.xlEdgeBottom].LineStyle = XlLineStyle.xlContinuous;
-            row.Borders[XlBordersIndex.xlEdgeBottom].Weight = XlBorderWeight.xlThin;
-            row.Interior.Color = isEven ? Color.LightYellow : Color.White;
+            cells.HorizontalAlignment = XlHAlign.xlHAlignLeft;
+            cells.NumberFormat = "0";
+        }
+
+        public static void VerticalTableRow(Range cells, bool isEven)
+        {
+            cells.Interior.Color = isEven ? Color.LightYellow : Color.White;
         }
 
         public static void ActivateErrorCell(Range cell)

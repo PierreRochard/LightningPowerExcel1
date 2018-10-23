@@ -40,8 +40,8 @@ namespace LNDExcel
 
         public SendPaymentSheet(Worksheet ws, AsyncLightningApp lApp)
         {
-            this.Ws = ws;
-            this.LApp = lApp;
+            Ws = ws;
+            LApp = lApp;
         }
         
         public void InitializePaymentRequest()
@@ -85,6 +85,7 @@ namespace LNDExcel
             Tables.SetupTable<Hop>(Ws, "Route", Hop.Descriptor, null, _paymentResponseDataStartRow + 12);
 
             _payReqInputCell.Columns.ColumnWidth = _payReqColumnWidth;
+            Tables.RemoveLoadingMark(Ws);
         }
 
 
