@@ -85,7 +85,7 @@ namespace LNDExcel.Tests
         {
             LndClient lndClient = new LndClient();
             // Todo: query a testnet lapp for a payment request
-            var response = lndClient.SendPayment("");
+            var response = lndClient.SendPayment("", 30);
             Assert.IsNotNull(response);
         }
     }

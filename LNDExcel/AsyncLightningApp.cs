@@ -142,7 +142,7 @@ namespace LNDExcel
 
         public void Refresh<TResponse, TData>(string sheetName, MessageDescriptor messageDescriptor, string propertyName, Func<IMessage> query)
         {
-            Tables.MarkAsLoadingTable(_excelAddIn.Application.Sheets[sheetName], messageDescriptor);
+            Tables.MarkAsLoadingTable(_excelAddIn.Application.Sheets[sheetName]);
 
             BackgroundWorker bw = new BackgroundWorker();
             if (SynchronizationContext.Current == null)
@@ -150,7 +150,15 @@ namespace LNDExcel
                 SynchronizationContext.SetSynchronizationContext(new WindowsFormsSynchronizationContext());
             }
             bw.DoWork += (o, args) => BwList(o, args, query);
-            bw.RunWorkerCompleted += (o, args) => BwListCompleted<TResponse, TData>(o, args, sheetName, messageDescriptor, propertyName);
+            switch (sheetName)
+            {
+                case SheetNames.Channels:
+                    bw.RunWorkerCompleted += BwListChannelsCompleted;
+                    break;
+                default:
+                    bw.RunWorkerCompleted += (o, args) => BwListCompleted<TResponse, TData>(o, args, sheetName, messageDescriptor, propertyName);
+                    break;
+            }
             bw.RunWorkerAsync();
         }
 
@@ -164,6 +172,13 @@ namespace LNDExcel
             var response = (T)e.Result;
             var data = (RepeatedField<T2>) response.GetType().GetProperty(propertyName)?.GetValue(response, null);
             Tables.SetupTable(_excelAddIn.Application.Sheets[sheetName], "", messageDescriptor, data);
+        }
+        
+        private void BwListChannelsCompleted(object sender, RunWorkerCompletedEventArgs e)
+        {
+            var response = (ListChannelsResponse)e.Result;
+            var data = response.Channels;
+            _excelAddIn.ChannelsSheet.Update(data);
         }
     }
 }

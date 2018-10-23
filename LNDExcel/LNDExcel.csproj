@@ -54,6 +54,11 @@
       <ProductName>Microsoft .NET Framework 4.6.1 %28x86 and x64%29</ProductName>
       <Install>true</Install>
     </BootstrapperPackage>
+    <BootstrapperPackage Include=".NETFramework,Version=v4.7.1">
+      <Visible>False</Visible>
+      <ProductName>Microsoft .NET Framework 4.7.1 %28x86 and x64%29</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
     <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
       <Visible>False</Visible>
       <ProductName>.NET Framework 3.5 SP1</ProductName>
@@ -196,6 +201,7 @@
     can be found.
   -->
   <ItemGroup>
+    <Compile Include="ChannelsSheet.cs" />
     <Compile Include="Formatting.cs" />
     <Compile Include="AsyncLightningApp.cs" />
     <Compile Include="LndClient.cs" />

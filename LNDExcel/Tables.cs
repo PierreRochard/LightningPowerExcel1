@@ -12,13 +12,14 @@ namespace LNDExcel
 {
     public class Tables
     {
-        public static void MarkAsLoadingTable(Worksheet ws, MessageDescriptor messageDescriptor)
+        public static void MarkAsLoadingTable(Worksheet ws)
         {
-            var fieldCount = messageDescriptor.Fields.InDeclarationOrder().Count;
-            var dataRange = ws.Range[ws.Cells[3, 2], ws.Cells[100, fieldCount]];
-            dataRange.Clear();
-            ws.Cells[3, 2].Value2 = "Loading...";
-            dataRange.Interior.Color = Color.LightGray;
+            ws.Cells[1, 2].Value2 = "Loading...";
+        }
+
+        public static void RemoveLoadingMark(Worksheet ws)
+        {
+            ws.Cells[1, 2].Value2 = "";
         }
 
         public static void ClearTable(Worksheet ws, MessageDescriptor messageDescriptor, int startRow = 2,
@@ -170,7 +171,7 @@ namespace LNDExcel
                     Formatting.TableDataCell(dataCell);
                 }
                 Range rowRange = ws.Range[ws.Cells[rowNumber, startColumn], ws.Cells[rowNumber, endCol]];
-                Formatting.TableDataRow(rowRange, rowI % 2 == 0);
+                Formatting.TableDataRow(rowRange, rowNumber % 2 == 0);
             }
 
             ws.Range["A:AZ"].Columns.AutoFit();

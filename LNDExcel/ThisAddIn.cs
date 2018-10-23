@@ -12,6 +12,7 @@ namespace LNDExcel
 
         public AsyncLightningApp LApp;
         public SendPaymentSheet SendPaymentSheet;
+        public ChannelsSheet ChannelsSheet;
 
         private void ThisAddIn_Startup(object sender, EventArgs e)
         {
@@ -50,6 +51,7 @@ namespace LNDExcel
             SetupSheet(SheetNames.GetInfo);
             MarkLndExcelWorkbook();
             SetupSheet(SheetNames.Channels);
+            this.ChannelsSheet = new ChannelsSheet(Application.Sheets[SheetNames.Channels], this.LApp);
             SetupSheet(SheetNames.Payments);
             SetupSheet(SheetNames.SendPayment);
             this.SendPaymentSheet = new SendPaymentSheet(Application.Sheets[SheetNames.SendPayment], this.LApp);

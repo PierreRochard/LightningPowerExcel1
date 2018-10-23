@@ -25,35 +25,55 @@ namespace LNDExcel
         {
             header.Interior.Color = Color.White;
             header.Font.Bold = true;
+            header.HorizontalAlignment = XlHAlign.xlHAlignCenter;
+
+            header.Borders[XlBordersIndex.xlEdgeRight].LineStyle = XlLineStyle.xlContinuous;
+            header.Borders[XlBordersIndex.xlEdgeRight].Weight = XlBorderWeight.xlThin;
+
+            header.Borders[XlBordersIndex.xlEdgeLeft].LineStyle = XlLineStyle.xlContinuous;
+            header.Borders[XlBordersIndex.xlEdgeLeft].Weight = XlBorderWeight.xlThin;
+
             header.Borders[XlBordersIndex.xlEdgeBottom].LineStyle = XlLineStyle.xlContinuous;
             header.Borders[XlBordersIndex.xlEdgeBottom].Weight = XlBorderWeight.xlThick;
+
             header.Borders[XlBordersIndex.xlEdgeTop].LineStyle = XlLineStyle.xlContinuous;
             header.Borders[XlBordersIndex.xlEdgeTop].Weight = XlBorderWeight.xlThin;
+
+            header.Borders[XlBordersIndex.xlInsideHorizontal].LineStyle = XlLineStyle.xlContinuous;
+            header.Borders[XlBordersIndex.xlInsideHorizontal].Weight = XlBorderWeight.xlThin;
+
+            header.Borders[XlBordersIndex.xlInsideVertical].LineStyle = XlLineStyle.xlContinuous;
+            header.Borders[XlBordersIndex.xlInsideVertical].Weight = XlBorderWeight.xlThin;
         }
 
         public static void TableHeaderCell(Range headerCell)
         {
-            headerCell.Borders[XlBordersIndex.xlEdgeRight].LineStyle = XlLineStyle.xlContinuous;
-            headerCell.Borders[XlBordersIndex.xlEdgeRight].Weight = XlBorderWeight.xlThin;
-            headerCell.Borders[XlBordersIndex.xlEdgeLeft].LineStyle = XlLineStyle.xlContinuous;
-            headerCell.Borders[XlBordersIndex.xlEdgeLeft].Weight = XlBorderWeight.xlThin;
-            headerCell.HorizontalAlignment = XlHAlign.xlHAlignCenter;
         }
 
         public static void TableDataCell(Range dataCell)
         {
-            dataCell.Borders[XlBordersIndex.xlEdgeRight].LineStyle = XlLineStyle.xlContinuous;
-            dataCell.Borders[XlBordersIndex.xlEdgeRight].Weight = XlBorderWeight.xlThin;
-            dataCell.Borders[XlBordersIndex.xlEdgeLeft].LineStyle = XlLineStyle.xlContinuous;
-            dataCell.Borders[XlBordersIndex.xlEdgeLeft].Weight = XlBorderWeight.xlThin;
-            dataCell.HorizontalAlignment = XlHAlign.xlHAlignCenter;
-            dataCell.VerticalAlignment = XlVAlign.xlVAlignCenter;
         }
 
         public static void TableDataRow(Range rowRange, bool isEven)
         {
+            rowRange.HorizontalAlignment = XlHAlign.xlHAlignCenter;
+            rowRange.VerticalAlignment = XlVAlign.xlVAlignCenter;
+
+            rowRange.Borders[XlBordersIndex.xlEdgeRight].LineStyle = XlLineStyle.xlContinuous;
+            rowRange.Borders[XlBordersIndex.xlEdgeRight].Weight = XlBorderWeight.xlThin;
+
+            rowRange.Borders[XlBordersIndex.xlEdgeLeft].LineStyle = XlLineStyle.xlContinuous;
+            rowRange.Borders[XlBordersIndex.xlEdgeLeft].Weight = XlBorderWeight.xlThin;
+
             rowRange.Borders[XlBordersIndex.xlEdgeBottom].LineStyle = XlLineStyle.xlContinuous;
             rowRange.Borders[XlBordersIndex.xlEdgeBottom].Weight = XlBorderWeight.xlThin;
+
+            rowRange.Borders[XlBordersIndex.xlInsideHorizontal].LineStyle = XlLineStyle.xlContinuous;
+            rowRange.Borders[XlBordersIndex.xlInsideHorizontal].Weight = XlBorderWeight.xlThin;
+
+            rowRange.Borders[XlBordersIndex.xlInsideVertical].LineStyle = XlLineStyle.xlContinuous;
+            rowRange.Borders[XlBordersIndex.xlInsideVertical].Weight = XlBorderWeight.xlThin;
+
             rowRange.Interior.Color = isEven ? Color.LightYellow : Color.White;
         }
 
