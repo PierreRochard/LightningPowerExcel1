@@ -6,6 +6,16 @@ namespace LNDExcel
 {
     public class Utilities
     {
+        public static void MarkAsLoadingTable(Worksheet ws)
+        {
+            ws.Cells[1, 2].Value2 = "Loading...";
+        }
+
+        public static void RemoveLoadingMark(Worksheet ws)
+        {
+            ws.Cells[1, 2].Value2 = "";
+        }
+
         public static string FormatFieldName(string fieldName)
         {
             return Thread.CurrentThread.CurrentCulture.TextInfo.ToTitleCase(fieldName.Replace("_", " "));

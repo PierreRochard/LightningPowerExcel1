@@ -1,12 +1,8 @@
 ﻿using System.Collections.Generic;
-using System.Drawing;
-using System.Globalization;
 using System.Linq;
-using System.Threading;
 using Google.Protobuf;
 using Google.Protobuf.Collections;
 using Google.Protobuf.Reflection;
-using Lnrpc;
 using Microsoft.Office.Interop.Excel;
 
 namespace LNDExcel
@@ -21,7 +17,7 @@ namespace LNDExcel
         private int _startColumn;
         private int _endColumn;
 
-        private readonly Dictionary<object, TMessageClass> _data;
+        private Dictionary<object, TMessageClass> _data;
         private readonly MessageDescriptor _messageDescriptor;
         private readonly IFieldAccessor _uniqueKeyField;
         private readonly string _uniqueKeyName;
@@ -230,6 +226,13 @@ namespace LNDExcel
 
             return lastRow;
 
+        }
+
+        public void Clear()
+        {
+            var data = Ws.Range[Ws.Cells[_headerRow + 1, _startColumn], Ws.Cells[GetLastRow(), _endColumn]];
+            data.ClearContents();
+            _data = new Dictionary<object, TMessageClass>();
         }
     }
 }

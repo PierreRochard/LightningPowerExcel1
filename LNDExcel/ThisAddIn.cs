@@ -2,8 +2,7 @@
 using System.Drawing;
 using System.Runtime.InteropServices;
 using Lnrpc;
-using Workbook = Microsoft.Office.Interop.Excel.Workbook;
-using Worksheet = Microsoft.Office.Interop.Excel.Worksheet;
+using Microsoft.Office.Interop.Excel;
 
 namespace LNDExcel
 {
@@ -49,7 +48,7 @@ namespace LNDExcel
 
         public void ConnectLnd()
         {
-            this.LApp = new AsyncLightningApp(this);
+            LApp = new AsyncLightningApp(this);
 
             CreateSheet(SheetNames.GetInfo);
             GetInfoSheet = new VerticalTableSheet<GetInfoResponse>(Application.Sheets[SheetNames.GetInfo], LApp, GetInfoResponse.Descriptor);
@@ -67,7 +66,7 @@ namespace LNDExcel
             LApp.Refresh(SheetNames.Payments);
 
             CreateSheet(SheetNames.SendPayment);
-            this.SendPaymentSheet = new SendPaymentSheet(Application.Sheets[SheetNames.SendPayment], this.LApp);
+            SendPaymentSheet = new SendPaymentSheet(Application.Sheets[SheetNames.SendPayment], LApp);
             SendPaymentSheet.InitializePaymentRequest();
 
             GetInfoSheet.Ws.Activate();
@@ -83,6 +82,7 @@ namespace LNDExcel
             Worksheet ws;
             try
             {
+                // ReSharper disable once RedundantAssignment
                 ws = Application.Sheets[worksheetName];
             }
             catch (COMException)

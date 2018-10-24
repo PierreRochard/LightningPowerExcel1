@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Drawing;
-using System.Threading;
-using Microsoft.Office.Interop.Excel;
-
 using Grpc.Core;
-
 using Lnrpc;
+using Microsoft.Office.Interop.Excel;
+using Button = Microsoft.Office.Tools.Excel.Controls.Button;
 
 namespace LNDExcel
 {
@@ -15,6 +13,10 @@ namespace LNDExcel
 
         public AsyncLightningApp LApp;
         public Worksheet Ws;
+
+        public VerticalTableSheet<PayReq> PaymentRequestTable;
+        public VerticalTableSheet<Route> RouteTable;
+        public TableSheet<Hop> HopTable;
 
         private Range _payReqLabelCell;
         private Range _payReqInputCell;
@@ -61,14 +63,15 @@ namespace LNDExcel
 
             Ws.Change += WsOnChangeParsePayReq;
 
-            Tables.SetupVerticalTable(Ws, "Decoded Payment Request", PayReq.Descriptor, null, _payReqDataStartRow);
+            PaymentRequestTable = new VerticalTableSheet<PayReq>(Ws, LApp, PayReq.Descriptor);
+            PaymentRequestTable.SetupVerticalTable("Decoded Payment Request", _payReqDataStartRow);
 
             _errorData = Ws.Cells[_sendPaymentButtonRow + 1, _startColumn + 1];
 
-            Microsoft.Office.Tools.Excel.Controls.Button sendPaymentButton = Utilities.CreateButton("sendPayment", Ws, Ws.Cells[_sendPaymentButtonRow, _startColumn], "Send Payment");
+            Button sendPaymentButton = Utilities.CreateButton("sendPayment", Ws, Ws.Cells[_sendPaymentButtonRow, _startColumn], "Send Payment");
             sendPaymentButton.Click += SendPaymentButtonOnClick;
             
-            Microsoft.Office.Tools.Excel.Controls.Button clearPaymentInfoButton = Utilities.CreateButton("clearPaymentInfo", Ws, Ws.Cells[_clearPaymentInfoButtonRow, _startColumn], "Clear");
+            Button clearPaymentInfoButton = Utilities.CreateButton("clearPaymentInfo", Ws, Ws.Cells[_clearPaymentInfoButtonRow, _startColumn], "Clear");
             clearPaymentInfoButton.Click += ClearPaymentInfoButtonOnClick;
 
             _sendStatusRange = Ws.Cells[_sendPaymentButtonRow + 1, _startColumn];
@@ -81,18 +84,21 @@ namespace LNDExcel
             _paymentPreimageCell = Ws.Cells[_paymentResponseDataStartRow + 1, _startColumn + 1];
             _paymentPreimageCell.Interior.Color = Color.PaleGreen;
             
-            Tables.SetupVerticalTable(Ws, "Payment Summary", Route.Descriptor, null, _paymentResponseDataStartRow + 3);
-            Tables.SetupTable<Hop>(Ws, "Route", Hop.Descriptor, null, _paymentResponseDataStartRow + 12);
+            RouteTable = new VerticalTableSheet<Route>(Ws, LApp, Route.Descriptor);
+            RouteTable.SetupVerticalTable("Payment Summary", _paymentResponseDataStartRow + 3);
+
+            HopTable = new TableSheet<Hop>(Ws, LApp, Hop.Descriptor, "chan_id");
+            HopTable.SetupTable("Route", 4, _paymentResponseDataStartRow + 12);
 
             _payReqInputCell.Columns.ColumnWidth = _payReqColumnWidth;
-            Tables.RemoveLoadingMark(Ws);
+            Utilities.RemoveLoadingMark(Ws);
         }
 
 
         private void ClearPaymentInfoButtonOnClick(object sender, EventArgs e)
         {
             ClearPayReq();
-            ClearParsedPayReq();
+            PaymentRequestTable.Clear();
             ClearSendStatus();
             ClearErrorData();
             ClearSendPaymentResponseData();
@@ -101,11 +107,6 @@ namespace LNDExcel
         private void ClearPayReq()
         {
             _payReqInputCell.Value2 = "";
-        }
-
-        private void ClearParsedPayReq()
-        {
-            Tables.ClearVerticalTable(Ws, PayReq.Descriptor, _payReqDataStartRow);
         }
 
         private void ClearErrorData()
@@ -122,8 +123,8 @@ namespace LNDExcel
         private void ClearSendPaymentResponseData()
         {
             _paymentPreimageCell.Value2 = "";
-            Tables.ClearVerticalTable(Ws, Route.Descriptor, _paymentResponseDataStartRow + 3);
-            Tables.ClearTable(Ws, Hop.Descriptor, _paymentResponseDataStartRow + 12);
+            RouteTable.Clear();
+            HopTable.Clear();
         }
 
         private void DisplayError(string errorType, string errorMessage)
@@ -156,8 +157,7 @@ namespace LNDExcel
                 DisplayError("Parsing error", rpcException.Status.Detail);
                 return;
             }
-            Tables.PopulateVerticalTable(Ws, PayReq.Descriptor, response, _payReqDataStartRow);
-
+            PaymentRequestTable.Update(response);
             ClearErrorData();
 
             _payReqInputCell.Columns.ColumnWidth = _payReqColumnWidth;
@@ -181,7 +181,6 @@ namespace LNDExcel
             catch (RpcException rpcException)
             {
                 DisplayError("Payment error", rpcException.Status.Detail);
-                return;
             }
         }
 
@@ -190,7 +189,7 @@ namespace LNDExcel
             ClearSendPaymentResponseData();
             ClearErrorData();
             // Indicate payment is being sent below send button
-            _sendStatusRange.Value2 = $"Sending payment...";
+            _sendStatusRange.Value2 = "Sending payment...";
         }
 
         public void PopulateSendPaymentError(RpcException exception)
@@ -206,8 +205,8 @@ namespace LNDExcel
             {
                 _paymentPreimageCell.Value2 = BitConverter.ToString(response.PaymentPreimage.ToByteArray()).Replace("-", "").ToLower();
 
-                Tables.PopulateVerticalTable(Ws, Route.Descriptor, response.PaymentRoute, _paymentResponseDataStartRow + 3);
-                Tables.PopulateTable(Ws, Hop.Descriptor, response.PaymentRoute.Hops, _paymentResponseDataStartRow + 12);
+                RouteTable.Update(response.PaymentRoute);
+                HopTable.Update(response.PaymentRoute.Hops);
             }
             else
             {

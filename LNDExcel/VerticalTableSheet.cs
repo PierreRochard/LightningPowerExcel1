@@ -65,7 +65,14 @@ namespace LNDExcel
                 Formatting.VerticalTableRow(rowRange, rowNumber % 2 == 0);
             }
         }
-        
+
+        public void Clear()
+        {
+            var data = Ws.Range[Ws.Cells[_dataStartRow, _endColumn], Ws.Cells[_endRow, _endColumn]];
+            data.ClearContents();
+            _data = default(TMessageClass);
+        }
+
         public void Update(TMessageClass newMessage)
         {
             

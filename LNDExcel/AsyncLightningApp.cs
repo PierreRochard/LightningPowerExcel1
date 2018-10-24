@@ -32,7 +32,7 @@ namespace LNDExcel
                 SynchronizationContext.SetSynchronizationContext(new WindowsFormsSynchronizationContext());
             }
 
-            Tables.MarkAsLoadingTable(_excelAddIn.Application.Sheets[sheetName]);
+            Utilities.MarkAsLoadingTable(_excelAddIn.Application.Sheets[sheetName]);
             switch (sheetName)
             {
                 case SheetNames.GetInfo:
@@ -50,25 +50,28 @@ namespace LNDExcel
                         BwListCompleted<Payment, ListPaymentsResponse>(o, args, _excelAddIn.PaymentsSheet);
                     break;
                 default:
-                    Tables.RemoveLoadingMark(_excelAddIn.Application.Sheets[sheetName]);
+                    Utilities.RemoveLoadingMark(_excelAddIn.Application.Sheets[sheetName]);
                     return;
             }
 
             bw.RunWorkerAsync();
         }
 
+        // ReSharper disable once UnusedParameter.Local
         private static void BwQuery(object sender, DoWorkEventArgs e, Func<IMessage> query)
         {
             e.Result = query();
         }
 
+        // ReSharper disable once UnusedParameter.Local
         private void BwVerticalListCompleted<TResponse>(object sender, RunWorkerCompletedEventArgs e, VerticalTableSheet<TResponse> tableSheet) where TResponse : IMessage
         {
             var response = (TResponse)e.Result;
             tableSheet.Update(response);
-            Tables.RemoveLoadingMark(tableSheet.Ws);
+            Utilities.RemoveLoadingMark(tableSheet.Ws);
         }
         
+        // ReSharper disable once UnusedParameter.Local
         private static void BwListCompleted<TMessage, TResponse>(object sender, RunWorkerCompletedEventArgs e,
             TableSheet<TMessage> tableSheet) where TMessage : IMessage where TResponse : IMessage
         {
@@ -78,7 +81,7 @@ namespace LNDExcel
 
             var data = (RepeatedField<TMessage>)fieldDescriptor.Accessor.GetValue(response);
             tableSheet.Update(data);
-            Tables.RemoveLoadingMark(tableSheet.Ws);
+            Utilities.RemoveLoadingMark(tableSheet.Ws);
         }
 
         public void SendPayment(string paymentRequest)
@@ -124,6 +127,7 @@ namespace LNDExcel
             return await sendTask;
         }
 
+        // ReSharper disable once UnusedParameter.Local
         private async Task<SendResponse> SendPaymentAsync(object sender, string paymentRequest, int timeout)
         {
             var stream = LndClient.SendPayment(paymentRequest, timeout);

@@ -201,7 +201,6 @@
     can be found.
   -->
   <ItemGroup>
-    <Compile Include="ChannelsSheet.cs" />
     <Compile Include="Formatting.cs" />
     <Compile Include="AsyncLightningApp.cs" />
     <Compile Include="LndClient.cs" />
@@ -257,7 +256,6 @@
     <Compile Include="RpcGrpc.cs" />
     <Compile Include="SendPaymentSheet.cs" />
     <Compile Include="SheetNames.cs" />
-    <Compile Include="Tables.cs" />
     <Compile Include="ThisAddIn.cs">
       <SubType>Code</SubType>
     </Compile>
