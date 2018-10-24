@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using Google.Protobuf;
 using Google.Protobuf.Collections;
 using Google.Protobuf.Reflection;
@@ -19,12 +20,15 @@ namespace LNDExcel
 
         private TMessageClass _data;
         private readonly IList<FieldDescriptor> _fields;
+        private readonly IReadOnlyCollection<string> _excludeList;
 
-        public VerticalTableSheet(Worksheet ws, AsyncLightningApp lApp, MessageDescriptor messageDescriptor)
+        public VerticalTableSheet(Worksheet ws, AsyncLightningApp lApp, MessageDescriptor messageDescriptor, 
+            IReadOnlyCollection<string> excludeList = default(List<string>))
         {
             Ws = ws;
             LApp = lApp;
             _fields = messageDescriptor.Fields.InDeclarationOrder();
+            _excludeList = excludeList;
         }
         
         public void SetupVerticalTable(string tableName, int startRow = 2, int startColumn = 2)
@@ -34,7 +38,14 @@ namespace LNDExcel
             _startColumn = startColumn;
             _endColumn = _startColumn + 1;
 
-            _endRow = startRow + _fields.Count;
+            if (_excludeList == null)
+            {
+                _endRow = startRow + _fields.Count;
+            }
+            else
+            {
+                _endRow = startRow + _fields.Count(f => !_excludeList.Any(f.Name.Contains));
+            }
 
             var title = Ws.Cells[_startRow, _startColumn];
             title.Font.Italic = true;
@@ -49,20 +60,21 @@ namespace LNDExcel
             var data = Ws.Range[Ws.Cells[_dataStartRow, _endColumn], Ws.Cells[_endRow, _endColumn]];
             Formatting.VerticalTableDataColumn(data);
 
-            for (var fieldIndex = 0; fieldIndex < _fields.Count; fieldIndex++)
+            var rowIndex = 0;
+            foreach (var field in _fields)
             {
-                var rowNumber = _dataStartRow + fieldIndex;
+                if (_excludeList != null && _excludeList.Any(field.Name.Contains)) continue;
+
+                var rowNumber = _dataStartRow + rowIndex;
+
                 var headerCell = Ws.Cells[rowNumber, _startColumn];
-                var field = _fields[fieldIndex];
                 var fieldName = Utilities.FormatFieldName(field.Name);
                 headerCell.Value2 = fieldName;
-            }
 
-            for (var rowI = 0; rowI < _fields.Count; rowI++)
-            {
-                var rowNumber = _dataStartRow + rowI;
                 var rowRange = Ws.Range[Ws.Cells[rowNumber, _startColumn], Ws.Cells[rowNumber, _endColumn]];
                 Formatting.VerticalTableRow(rowRange, rowNumber % 2 == 0);
+
+                rowIndex++;
             }
         }
 
@@ -75,14 +87,12 @@ namespace LNDExcel
 
         public void Update(TMessageClass newMessage)
         {
-            
             var isCached = _data != null;
             if (isCached && _data.Equals(newMessage))
             {
                 return;
             }
-
-
+           
             if (!isCached)
             {
                 Populate(newMessage);
@@ -94,21 +104,20 @@ namespace LNDExcel
 
             Ws.Range["A:C"].Columns.AutoFit();
             Ws.Range["A:C"].Rows.AutoFit();
-            _data = newMessage;
         }
 
-        private void Populate(TMessageClass newMessage)
+        public void Populate(TMessageClass newMessage)
         {
-            for (var fieldIndex = 0; fieldIndex < _fields.Count; fieldIndex++)
+            var rowIndex = 0;
+            foreach (var field in _fields)
             {
-                var field = _fields[fieldIndex];
-                var dataCell = Ws.Cells[_dataStartRow + fieldIndex, _endColumn];
-                var value = "";
+                if (_excludeList != null && _excludeList.Any(field.Name.Contains)) continue;
 
-                if (field.IsRepeated && field.FieldType != FieldType.Message)
+                var dataCell = Ws.Cells[_dataStartRow + rowIndex, _endColumn];
+                var value = string.Empty;
+                if (field.IsRepeated && field.Accessor.GetValue(newMessage) is RepeatedField<object> items)
                 {
-                    var items = (RepeatedField<string>)field.Accessor.GetValue(newMessage);
-                    for (int i = 0; i < items.Count; i++)
+                    for (var i = 0; i < items.Count; i++)
                     {
                         value += items[i];
                         if (i < items.Count - 1)
@@ -117,12 +126,14 @@ namespace LNDExcel
                         }
                     }
                 }
-                else
+                else 
                 {
                     value = field.Accessor.GetValue(newMessage).ToString();
                 }
                 dataCell.Value2 = value;
+                rowIndex++;
             }
+            _data = newMessage;
         }
 
         public void Update(TMessageClass newMessage, TMessageClass oldMessage)
@@ -156,6 +167,7 @@ namespace LNDExcel
 
                 dataCell.Value2 = value;
             }
+            _data = newMessage;
 
         }
     }

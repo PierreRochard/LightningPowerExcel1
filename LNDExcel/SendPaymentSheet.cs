@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using Grpc.Core;
 using Lnrpc;
@@ -84,7 +85,7 @@ namespace LNDExcel
             _paymentPreimageCell = Ws.Cells[_paymentResponseDataStartRow + 1, _startColumn + 1];
             _paymentPreimageCell.Interior.Color = Color.PaleGreen;
             
-            RouteTable = new VerticalTableSheet<Route>(Ws, LApp, Route.Descriptor);
+            RouteTable = new VerticalTableSheet<Route>(Ws, LApp, Route.Descriptor, new List<string> { "hops" });
             RouteTable.SetupVerticalTable("Payment Summary", _paymentResponseDataStartRow + 3);
 
             HopTable = new TableSheet<Hop>(Ws, LApp, Hop.Descriptor, "chan_id");
@@ -205,8 +206,9 @@ namespace LNDExcel
             {
                 _paymentPreimageCell.Value2 = BitConverter.ToString(response.PaymentPreimage.ToByteArray()).Replace("-", "").ToLower();
 
-                RouteTable.Update(response.PaymentRoute);
+                RouteTable.Populate(response.PaymentRoute);
                 HopTable.Update(response.PaymentRoute.Hops);
+                _payReqInputCell.Columns.ColumnWidth = _payReqColumnWidth;
             }
             else
             {
