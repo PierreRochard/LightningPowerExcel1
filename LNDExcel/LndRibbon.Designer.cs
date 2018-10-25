@@ -37,7 +37,7 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(LndRibbon));
             this.tab1 = this.Factory.CreateRibbonTab();
             this.group2 = this.Factory.CreateRibbonGroup();
-            this.connectLnd2 = this.Factory.CreateRibbonButton();
+            this.setupWB = this.Factory.CreateRibbonButton();
             this.group3 = this.Factory.CreateRibbonGroup();
             this.button1 = this.Factory.CreateRibbonButton();
             this.editBox2 = this.Factory.CreateRibbonEditBox();
@@ -55,18 +55,18 @@
             // 
             // group2
             // 
-            this.group2.Items.Add(this.connectLnd2);
-            this.group2.Label = "LND";
+            this.group2.Items.Add(this.setupWB);
+            this.group2.Label = "Workbook";
             this.group2.Name = "group2";
             // 
-            // connectLnd2
+            // setupWB
             // 
-            this.connectLnd2.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
-            this.connectLnd2.Image = ((System.Drawing.Image)(resources.GetObject("connectLnd2.Image")));
-            this.connectLnd2.Label = "Connect";
-            this.connectLnd2.Name = "connectLnd2";
-            this.connectLnd2.ShowImage = true;
-            this.connectLnd2.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.connectLnd2_Click);
+            this.setupWB.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
+            this.setupWB.Image = ((System.Drawing.Image)(resources.GetObject("setupWB.Image")));
+            this.setupWB.Label = "Setup Workbook";
+            this.setupWB.Name = "setupWB";
+            this.setupWB.ShowImage = true;
+            this.setupWB.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.SetupWB_Click);
             // 
             // group3
             // 
@@ -80,7 +80,7 @@
             this.button1.Description = "Generate New Address";
             this.button1.Label = "Generate New Address";
             this.button1.Name = "button1";
-            this.button1.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.button1_Click);
+            this.button1.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.Button1_Click);
             // 
             // editBox2
             // 
@@ -88,7 +88,7 @@
             this.editBox2.Name = "editBox2";
             this.editBox2.SizeString = "paddingtb1q0tt3rdscteaftam3rktfg37at27qtdctlree7g";
             this.editBox2.Text = null;
-            this.editBox2.TextChanged += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.editBox2_TextChanged);
+            this.editBox2.TextChanged += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.EditBox2_TextChanged);
             // 
             // LndRibbon
             // 
@@ -112,7 +112,7 @@
         internal Microsoft.Office.Tools.Ribbon.RibbonButton button1;
         internal Microsoft.Office.Tools.Ribbon.RibbonGroup group2;
         internal Microsoft.Office.Tools.Ribbon.RibbonGroup group3;
-        internal Microsoft.Office.Tools.Ribbon.RibbonButton connectLnd2;
+        internal Microsoft.Office.Tools.Ribbon.RibbonButton setupWB;
         internal Microsoft.Office.Tools.Ribbon.RibbonEditBox editBox2;
     }
 

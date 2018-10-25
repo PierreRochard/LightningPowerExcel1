@@ -12,7 +12,7 @@ namespace LNDExcel.Tests
         public void UnlockWalletTestWrongPassword()
         {
             // Arrange
-            LndClient lndClient = new LndClient();
+            LndClient lndClient = new LndClient("test_password");
 
             // Act and Assert
             Assert.ThrowsException<RpcException>(() => lndClient.UnlockWallet("wrong_password"));
@@ -22,7 +22,7 @@ namespace LNDExcel.Tests
         public void UnlockWalletTestRightPassword()
         {
             // Arrange
-            LndClient lndClient = new LndClient();
+            LndClient lndClient = new LndClient("test_password");
 
             // Act and Assert
             try
@@ -40,7 +40,7 @@ namespace LNDExcel.Tests
         public void GetInfoTest()
         {
             // Arrange
-            LndClient lndClient = new LndClient();
+            LndClient lndClient = new LndClient("test_password");
 
             // Act
             GetInfoResponse response = lndClient.GetInfo();
@@ -52,7 +52,7 @@ namespace LNDExcel.Tests
         public void NewAddressTest()
         {
             // Arrange
-            LndClient lndClient = new LndClient();
+            LndClient lndClient = new LndClient("test_password");
 
             // Act
             NewAddressResponse response = lndClient.NewAddress();
@@ -64,7 +64,7 @@ namespace LNDExcel.Tests
         public void ListChannelsTest()
         {
             // Arrange
-            LndClient lndClient = new LndClient();
+            LndClient lndClient = new LndClient("test_password");
 
             // Act
             ListChannelsResponse response = lndClient.ListChannels();
@@ -75,7 +75,7 @@ namespace LNDExcel.Tests
         [TestMethod()]
         public void ListPaymentsTest()
         {
-            LndClient lndClient = new LndClient();
+            LndClient lndClient = new LndClient("test_password");
             var response = lndClient.ListPayments();
             Assert.IsNotNull(response);
         }
@@ -83,7 +83,7 @@ namespace LNDExcel.Tests
         [TestMethod()]
         public void SendPaymentTest()
         {
-            LndClient lndClient = new LndClient();
+            LndClient lndClient = new LndClient("test_password");
             // Todo: query a testnet lapp for a payment request
             var response = lndClient.SendPayment("", 30);
             Assert.IsNotNull(response);

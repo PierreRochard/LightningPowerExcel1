@@ -59,5 +59,15 @@ namespace LNDExcel.Properties {
                 resourceCulture = value;
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] lnd {
+            get {
+                object obj = ResourceManager.GetObject("lnd", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
     }
 }

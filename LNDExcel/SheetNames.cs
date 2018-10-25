@@ -2,6 +2,7 @@
 {
     public static class SheetNames
     {
+        internal const string Nodes = "Node Log";
         internal const string GetInfo = "Info";
         internal const string OpenChannels = "Open Channels";
         internal const string Payments = "Payments";

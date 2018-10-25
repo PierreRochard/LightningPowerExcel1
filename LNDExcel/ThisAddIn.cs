@@ -10,6 +10,9 @@ namespace LNDExcel
     {
 
         public AsyncLightningApp LApp;
+        public Workbook Wb;
+
+        public NodeSheet NodesSheet;
         public VerticalTableSheet<GetInfoResponse> GetInfoSheet;
         public TableSheet<Channel> ChannelsSheet;
         public TableSheet<Payment> PaymentsSheet;
@@ -42,53 +45,59 @@ namespace LNDExcel
         {
             if (IsLndWorkbook())
             {
-                ConnectLnd();
+                SetupWorkbook(wb);
             }
         }
 
-        public void ConnectLnd()
+        public void SetupWorkbook(Workbook wb)
         {
-            LApp = new AsyncLightningApp(this);
-
+            Wb = wb;
+            CreateSheet(SheetNames.Nodes);
+            NodesSheet = new NodeSheet(Wb.Sheets[SheetNames.Nodes]);
+            
             CreateSheet(SheetNames.GetInfo);
-            GetInfoSheet = new VerticalTableSheet<GetInfoResponse>(Application.Sheets[SheetNames.GetInfo], LApp, GetInfoResponse.Descriptor);
+            GetInfoSheet = new VerticalTableSheet<GetInfoResponse>(Wb.Sheets[SheetNames.GetInfo], LApp, GetInfoResponse.Descriptor);
             GetInfoSheet.SetupVerticalTable("LND Node Info");
-            LApp.Refresh(SheetNames.GetInfo);
 
             CreateSheet(SheetNames.OpenChannels);
-            ChannelsSheet = new TableSheet<Channel>(Application.Sheets[SheetNames.OpenChannels], LApp, Channel.Descriptor, "chan_id");
+            ChannelsSheet = new TableSheet<Channel>(Wb.Sheets[SheetNames.OpenChannels], LApp, Channel.Descriptor, "chan_id");
             ChannelsSheet.SetupTable("Open Channels", 3);
-            LApp.Refresh(SheetNames.OpenChannels);
 
             CreateSheet(SheetNames.Payments);
-            PaymentsSheet = new TableSheet<Payment>(Application.Sheets[SheetNames.Payments], LApp, Payment.Descriptor, "payment_hash");
+            PaymentsSheet = new TableSheet<Payment>(Wb.Sheets[SheetNames.Payments], LApp, Payment.Descriptor, "payment_hash");
             PaymentsSheet.SetupTable("Payments", 3);
-            LApp.Refresh(SheetNames.Payments);
 
             CreateSheet(SheetNames.SendPayment);
-            SendPaymentSheet = new SendPaymentSheet(Application.Sheets[SheetNames.SendPayment], LApp);
+            SendPaymentSheet = new SendPaymentSheet(Wb.Sheets[SheetNames.SendPayment], LApp);
             SendPaymentSheet.InitializePaymentRequest();
 
-            GetInfoSheet.Ws.Activate();
             MarkLndExcelWorkbook();
-            
-            LApp.Refresh(SheetNames.GetInfo);
+            GetInfoSheet.Ws.Activate();
+
             Application.SheetActivate += Workbook_SheetActivate;
+        }
+
+        private void ConnectLnd()
+        {
+            LApp = new AsyncLightningApp(this);
+            LApp.Refresh(SheetNames.GetInfo);
+            LApp.Refresh(SheetNames.OpenChannels);
+            LApp.Refresh(SheetNames.Payments);
         }
 
         private void CreateSheet(string worksheetName)
         {
-            Worksheet oldWs = Application.ActiveSheet;
+            Worksheet oldWs = Wb.ActiveSheet;
             Worksheet ws;
             try
             {
                 // ReSharper disable once RedundantAssignment
-                ws = Application.Sheets[worksheetName];
+                ws = Wb.Sheets[worksheetName];
             }
             catch (COMException)
             {
-                Globals.ThisAddIn.Application.Sheets.Add();
-                ws = Application.ActiveSheet;
+                Globals.ThisAddIn.Wb.Sheets.Add();
+                ws = Wb.ActiveSheet;
                 ws.Name = worksheetName;
                 ws.Range["A:AZ"].Interior.Color = Color.White;
             }
@@ -102,12 +111,12 @@ namespace LNDExcel
                 return;
             }
             var ws = (Worksheet) sh;
-            LApp.Refresh(ws.Name);
+            LApp?.Refresh(ws.Name);
         }
 
         private void MarkLndExcelWorkbook()
         {
-            Worksheet ws = Application.Sheets[SheetNames.GetInfo];
+            Worksheet ws = Wb.Sheets[SheetNames.GetInfo];
             ws.Cells[1, 1].Value2 = "LNDExcel";
             ws.Cells[1, 1].Font.Color = Color.White;
         }

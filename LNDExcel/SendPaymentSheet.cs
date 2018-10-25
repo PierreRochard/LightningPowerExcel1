@@ -10,8 +10,6 @@ namespace LNDExcel
 {
     public class SendPaymentSheet
     {
-
-
         public AsyncLightningApp LApp;
         public Worksheet Ws;
 
@@ -151,7 +149,7 @@ namespace LNDExcel
             PayReq response;
             try
             {
-                response = LApp.LndClient.DecodePaymentRequest(payReq);
+                response = LApp.DecodePaymentRequest(payReq);
             }
             catch (RpcException rpcException)
             {

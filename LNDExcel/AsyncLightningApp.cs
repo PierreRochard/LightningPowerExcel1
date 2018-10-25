@@ -14,12 +14,11 @@ namespace LNDExcel
 {
     public class AsyncLightningApp
     {
-        public readonly LndClient LndClient;
         private readonly ThisAddIn _excelAddIn;
+        public LndClient LndClient;
 
         public AsyncLightningApp(ThisAddIn excelAddIn)
         {
-            LndClient = new LndClient();
             _excelAddIn = excelAddIn;
         }
 
@@ -32,7 +31,7 @@ namespace LNDExcel
                 SynchronizationContext.SetSynchronizationContext(new WindowsFormsSynchronizationContext());
             }
 
-            Utilities.MarkAsLoadingTable(_excelAddIn.Application.Sheets[sheetName]);
+            Utilities.MarkAsLoadingTable(_excelAddIn.Wb.Sheets[sheetName]);
             switch (sheetName)
             {
                 case SheetNames.GetInfo:
@@ -40,17 +39,20 @@ namespace LNDExcel
                     bw.RunWorkerCompleted += (o, args) => BwVerticalListCompleted(o, args, _excelAddIn.GetInfoSheet);
                     break;
                 case SheetNames.OpenChannels:
-                    bw.DoWork += (o, args) => BwQuery(o, args, LndClient.ListChannels);
+                    bw.DoWork += (o, args) => BwQuery(o, args, _excelAddIn.LndClient.ListChannels);
                     bw.RunWorkerCompleted += (o, args) =>
                         BwListCompleted<Channel, ListChannelsResponse>(o, args, _excelAddIn.ChannelsSheet);
                     break;
                 case SheetNames.Payments:
-                    bw.DoWork += (o, args) => BwQuery(o, args, LndClient.ListPayments);
+                    bw.DoWork += (o, args) => BwQuery(o, args, _excelAddIn.LndClient.ListPayments);
                     bw.RunWorkerCompleted += (o, args) =>
                         BwListCompleted<Payment, ListPaymentsResponse>(o, args, _excelAddIn.PaymentsSheet);
                     break;
+                case SheetNames.Nodes:
+                    Utilities.RemoveLoadingMark(_excelAddIn.Wb.Sheets[sheetName]);
+                    break;
                 default:
-                    Utilities.RemoveLoadingMark(_excelAddIn.Application.Sheets[sheetName]);
+                    Utilities.RemoveLoadingMark(_excelAddIn.Wb.Sheets[sheetName]);
                     return;
             }
 
@@ -130,7 +132,7 @@ namespace LNDExcel
         // ReSharper disable once UnusedParameter.Local
         private async Task<SendResponse> SendPaymentAsync(object sender, string paymentRequest, int timeout)
         {
-            var stream = LndClient.SendPayment(paymentRequest, timeout);
+            var stream = _excelAddIn.LndClient.SendPayment(paymentRequest, timeout);
 
             await stream.MoveNext(CancellationToken.None);
             return stream.Current;

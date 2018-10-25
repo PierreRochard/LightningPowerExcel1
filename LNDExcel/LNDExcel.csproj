@@ -201,24 +201,18 @@
     can be found.
   -->
   <ItemGroup>
+    <Compile Include="BalancesSheet.cs" />
+    <Compile Include="NodesSheet.cs" />
     <Compile Include="Formatting.cs" />
     <Compile Include="AsyncLightningApp.cs" />
+    <Compile Include="FormSheet.cs" />
     <Compile Include="LndClient.cs" />
-    <Compile Include="NewAddressForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="NewAddressForm.Designer.cs">
-      <DependentUpon>NewAddressForm.cs</DependentUpon>
-    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="TableSheet.cs" />
     <Compile Include="Utilities.cs" />
     <Compile Include="VerticalTableSheet.cs" />
-    <EmbeddedResource Include="NewAddressForm.resx">
-      <DependentUpon>NewAddressForm.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
@@ -266,6 +260,9 @@
       <DependentUpon>ThisAddIn.Designer.xml</DependentUpon>
     </Compile>
     <AppDesigner Include="Properties\" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\lnd.exe" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

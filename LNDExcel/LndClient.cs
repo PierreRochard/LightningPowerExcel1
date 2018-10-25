@@ -6,31 +6,24 @@ using System.Threading.Tasks;
 using Google.Protobuf;
 using Grpc.Core;
 using Lnrpc;
+using Microsoft.Office.Interop.Excel;
 using Channel = Grpc.Core.Channel;
 
 namespace LNDExcel
 {
-    internal interface ILndClient
-    {
-        UnlockWalletResponse UnlockWallet(string password);
-        GetInfoResponse GetInfo();
-        NewAddressResponse NewAddress(NewAddressRequest.Types.AddressType type);
-        ListChannelsResponse ListChannels();
-    }
-
-    public class LndClient : ILndClient
+    public class LndClient
     {
 
-        public LndClient()
+        private void TryUnlockWallet(string password)
         {
             try
             {
-                UnlockWalletResponse response = UnlockWallet("test_password");
+                // ReSharper disable once UnusedVariable
+                UnlockWalletResponse response = UnlockWallet(password);
                 Thread.Sleep(3000);
             }
             catch (RpcException e)
             {
-                
                 if ("unknown service lnrpc.WalletUnlocker" == e.Status.Detail)
                 {
                     // Wallet is already unlocked
@@ -40,7 +33,6 @@ namespace LNDExcel
                     throw;
                 }
             }
-
         }
 
         private Lightning.LightningClient GetLightningClient()
