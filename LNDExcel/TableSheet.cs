@@ -18,6 +18,7 @@ namespace LNDExcel
         private int _endColumn;
 
         public Dictionary<object, TMessageClass> Data;
+        public RepeatedField<TMessageClass> DataList;
         private readonly MessageDescriptor _messageDescriptor;
         private readonly IFieldAccessor _uniqueKeyField;
         private readonly string _uniqueKeyName;
@@ -72,7 +73,8 @@ namespace LNDExcel
 
         public void Update(RepeatedField<TMessageClass> data)
         {
-            foreach (var newMessage in data)
+            DataList = data;
+            foreach (var newMessage in DataList)
             {
                 var uniqueKey = _uniqueKeyField.GetValue(newMessage);
                 var isCached = Data.TryGetValue(uniqueKey, out var cachedMessage);
@@ -95,7 +97,7 @@ namespace LNDExcel
 
             foreach (var cachedUniqueKey in Data.Keys)
             {
-                var result = data.FirstOrDefault(newMessage => _uniqueKeyField.GetValue(newMessage).ToString() == cachedUniqueKey.ToString());
+                var result = DataList.FirstOrDefault(newMessage => _uniqueKeyField.GetValue(newMessage).ToString() == cachedUniqueKey.ToString());
                 if (result == null)
                 {
                     RemoveRow(cachedUniqueKey);

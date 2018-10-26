@@ -16,7 +16,7 @@ namespace LNDExcel
         private int _startRow;
         private int _dataStartRow;
         private int _startColumn;
-        private int _endColumn;
+        public int EndColumn;
         private int _endRow;
         private readonly IList<FieldDescriptor> _fields;
         private readonly IReadOnlyCollection<string> _excludeList;
@@ -35,7 +35,7 @@ namespace LNDExcel
             _startRow = startRow;
             _dataStartRow = startRow + 1;
             _startColumn = startColumn;
-            _endColumn = _startColumn + 1;
+            EndColumn = _startColumn + 1;
 
             if (_excludeList == null)
             {
@@ -50,13 +50,13 @@ namespace LNDExcel
             title.Font.Italic = true;
             title.Value2 = tableName;
 
-            var table = Ws.Range[Ws.Cells[_dataStartRow, _startColumn], Ws.Cells[_endRow, _endColumn]];
+            var table = Ws.Range[Ws.Cells[_dataStartRow, _startColumn], Ws.Cells[_endRow, EndColumn]];
             Formatting.VerticalTable(table);
 
             var header = Ws.Range[Ws.Cells[_dataStartRow, _startColumn], Ws.Cells[_endRow, _startColumn]];
             Formatting.VerticalTableHeaderColumn(header);
 
-            var data = Ws.Range[Ws.Cells[_dataStartRow, _endColumn], Ws.Cells[_endRow, _endColumn]];
+            var data = Ws.Range[Ws.Cells[_dataStartRow, EndColumn], Ws.Cells[_endRow, EndColumn]];
             Formatting.VerticalTableDataColumn(data);
 
             var rowIndex = 0;
@@ -70,7 +70,7 @@ namespace LNDExcel
                 var fieldName = Utilities.FormatFieldName(field.Name);
                 headerCell.Value2 = fieldName;
 
-                var rowRange = Ws.Range[Ws.Cells[rowNumber, _startColumn], Ws.Cells[rowNumber, _endColumn]];
+                var rowRange = Ws.Range[Ws.Cells[rowNumber, _startColumn], Ws.Cells[rowNumber, EndColumn]];
                 Formatting.VerticalTableRow(rowRange, rowNumber);
 
                 rowIndex++;
@@ -79,7 +79,7 @@ namespace LNDExcel
 
         public void Clear()
         {
-            var data = Ws.Range[Ws.Cells[_dataStartRow, _endColumn], Ws.Cells[_endRow, _endColumn]];
+            var data = Ws.Range[Ws.Cells[_dataStartRow, EndColumn], Ws.Cells[_endRow, EndColumn]];
             data.ClearContents();
             Data = default(TMessageClass);
         }
@@ -112,7 +112,7 @@ namespace LNDExcel
             {
                 if (_excludeList != null && _excludeList.Any(field.Name.Contains)) continue;
 
-                var dataCell = Ws.Cells[_dataStartRow + rowIndex, _endColumn];
+                var dataCell = Ws.Cells[_dataStartRow + rowIndex, EndColumn];
                 var value = string.Empty;
                 if (field.IsRepeated && field.Accessor.GetValue(newMessage) is RepeatedField<object> items)
                 {
@@ -145,7 +145,7 @@ namespace LNDExcel
                 var oldValue = field.Accessor.GetValue(oldMessage).ToString();
                 if (oldValue == newValue) continue;
 
-                var dataCell = Ws.Cells[_dataStartRow + fieldIndex, _endColumn];
+                var dataCell = Ws.Cells[_dataStartRow + fieldIndex, EndColumn];
                 var value = "";
 
                 if (field.IsRepeated && field.FieldType != FieldType.Message)

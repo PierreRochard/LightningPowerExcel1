@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using Google.Protobuf.Collections;
 using Grpc.Core;
 using Lnrpc;
 using Microsoft.Office.Interop.Excel;
@@ -14,8 +15,9 @@ namespace LNDExcel
         public Worksheet Ws;
 
         public VerticalTableSheet<PayReq> PaymentRequestTable;
-        public VerticalTableSheet<Route> RouteTable;
+        public VerticalTableSheet<Route> RouteTakenTable;
         public TableSheet<Hop> HopTable;
+        public TableSheet<Route> ProposedRoutesTable;
 
         private Range _payReqLabelCell;
         private Range _payReqInputCell;
@@ -33,9 +35,9 @@ namespace LNDExcel
         private int _startRow = 2;
 
         private int _payReqDataStartRow = 4;
-        private int _sendPaymentButtonRow = 16;
-        private int _clearPaymentInfoButtonRow = 18;
-        private int _paymentResponseDataStartRow = 20;
+        private int _sendPaymentButtonRow = 21;
+        private int _clearPaymentInfoButtonRow = 23;
+        private int _paymentResponseDataStartRow = 25;
 
         private int _payReqColumnWidth = 70;
 
@@ -65,6 +67,9 @@ namespace LNDExcel
             PaymentRequestTable = new VerticalTableSheet<PayReq>(Ws, LApp, PayReq.Descriptor);
             PaymentRequestTable.SetupVerticalTable("Decoded Payment Request", _payReqDataStartRow);
 
+            ProposedRoutesTable = new TableSheet<Route>(Ws, LApp, Route.Descriptor, "Hops");
+            ProposedRoutesTable.SetupTable("Proposed Routes", 3, _startRow=PaymentRequestTable.EndColumn + 2);
+
             _errorData = Ws.Cells[_sendPaymentButtonRow + 1, _startColumn + 1];
 
             Button sendPaymentButton = Utilities.CreateButton("sendPayment", Ws, Ws.Cells[_sendPaymentButtonRow, _startColumn], "Send Payment");
@@ -83,8 +88,8 @@ namespace LNDExcel
             _paymentPreimageCell = Ws.Cells[_paymentResponseDataStartRow + 1, _startColumn + 1];
             _paymentPreimageCell.Interior.Color = Color.PaleGreen;
             
-            RouteTable = new VerticalTableSheet<Route>(Ws, LApp, Route.Descriptor, new List<string> { "hops" });
-            RouteTable.SetupVerticalTable("Payment Summary", _paymentResponseDataStartRow + 3);
+            RouteTakenTable = new VerticalTableSheet<Route>(Ws, LApp, Route.Descriptor, new List<string> { "hops" });
+            RouteTakenTable.SetupVerticalTable("Payment Summary", _paymentResponseDataStartRow + 3);
 
             HopTable = new TableSheet<Hop>(Ws, LApp, Hop.Descriptor, "chan_id");
             HopTable.SetupTable("Route", 4, _paymentResponseDataStartRow + 12);
@@ -98,6 +103,7 @@ namespace LNDExcel
         {
             ClearPayReq();
             PaymentRequestTable.Clear();
+            ProposedRoutesTable.Clear();
             ClearSendStatus();
             ClearErrorData();
             ClearSendPaymentResponseData();
@@ -122,7 +128,7 @@ namespace LNDExcel
         private void ClearSendPaymentResponseData()
         {
             _paymentPreimageCell.Value2 = "";
-            RouteTable.Clear();
+            RouteTakenTable.Clear();
             HopTable.Clear();
         }
 
@@ -151,13 +157,24 @@ namespace LNDExcel
             {
                 response = LApp.DecodePaymentRequest(payReq);
             }
-            catch (RpcException rpcException)
+            catch (RpcException e)
             {
-                DisplayError("Parsing error", rpcException.Status.Detail);
+                DisplayError("Parsing error", e.Status.Detail);
                 return;
             }
             PaymentRequestTable.Update(response);
             ClearErrorData();
+
+            try
+            {
+                var r = LApp.QueryRoutes(response);
+                ProposedRoutesTable.Update(r.Routes);
+            }
+            catch (RpcException e)
+            {
+                DisplayError("Query route error", e.Status.Detail);
+                return;
+            }
 
             _payReqInputCell.Columns.ColumnWidth = _payReqColumnWidth;
         }
@@ -175,7 +192,7 @@ namespace LNDExcel
 
             try
             {
-                LApp.SendPayment(payReq);
+                LApp.SendPayment(PaymentRequestTable.Data, ProposedRoutesTable.DataList);
             }
             catch (RpcException rpcException)
             {
@@ -204,7 +221,7 @@ namespace LNDExcel
             {
                 _paymentPreimageCell.Value2 = BitConverter.ToString(response.PaymentPreimage.ToByteArray()).Replace("-", "").ToLower();
 
-                RouteTable.Populate(response.PaymentRoute);
+                RouteTakenTable.Populate(response.PaymentRoute);
                 HopTable.Update(response.PaymentRoute.Hops);
                 _payReqInputCell.Columns.ColumnWidth = _payReqColumnWidth;
             }
@@ -220,5 +237,7 @@ namespace LNDExcel
             // Indicate payment is being sent below send button
             _sendStatusRange.Value2 = $"Sending payment...{progress}%";
         }
+
+
     }
 }

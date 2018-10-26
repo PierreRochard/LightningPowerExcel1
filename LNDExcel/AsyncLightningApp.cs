@@ -143,7 +143,7 @@ namespace LNDExcel
 
         }
 
-        public void SendPayment(string paymentRequest)
+        public void SendPayment(PayReq paymentRequest, RepeatedField<Route> routes = null)
         {
             var bw = new BackgroundWorker {WorkerReportsProgress = true};
             if (SynchronizationContext.Current == null)
@@ -152,7 +152,7 @@ namespace LNDExcel
             }
 
             const int timeout = 30;
-            bw.DoWork += (o, args) => BwSendPayment(o, args, paymentRequest, timeout);
+            bw.DoWork += (o, args) => BwSendPayment(o, args, paymentRequest, timeout, routes);
             bw.ProgressChanged += BwSendPaymentOnProgressChanged;
             bw.RunWorkerCompleted += BwSendPayment_Completed;
             _excelAddIn.SendPaymentSheet.MarkSendingPayment();
@@ -164,17 +164,17 @@ namespace LNDExcel
             _excelAddIn.SendPaymentSheet.UpdateSendPaymentProgress(e.ProgressPercentage);
         }
 
-        private void BwSendPayment(object sender, DoWorkEventArgs e, string paymentRequest, int timeout)
+        private void BwSendPayment(object sender, DoWorkEventArgs e, PayReq paymentRequest, int timeout, RepeatedField<Route> routes = null)
         {
             if (sender != null)
             {
-                e.Result = ProgressSend(sender, paymentRequest, timeout).GetAwaiter().GetResult();
+                e.Result = ProgressSend(sender, paymentRequest, timeout, routes).GetAwaiter().GetResult();
             }
         }
 
-        private async Task<SendResponse> ProgressSend(object sender, string paymentRequest, int timeout)
+        private async Task<SendResponse> ProgressSend(object sender, PayReq paymentRequest, int timeout, RepeatedField<Route> routes = null)
         {
-            var sendTask = SendPaymentAsync(sender, paymentRequest, timeout);
+            var sendTask = SendPaymentAsync(sender, paymentRequest, timeout, routes);
             var i = 0;
             while (!sendTask.IsCompleted)
             {
@@ -187,10 +187,9 @@ namespace LNDExcel
         }
 
         // ReSharper disable once UnusedParameter.Local
-        private async Task<SendResponse> SendPaymentAsync(object sender, string paymentRequest, int timeout)
+        private async Task<SendResponse> SendPaymentAsync(object sender, PayReq paymentRequest, int timeout, RepeatedField<Route> routes = null)
         {
-            var stream = LndClient.SendPayment(paymentRequest, timeout);
-
+            var stream = routes != null ? LndClient.SendToRoute(paymentRequest, routes, timeout) : LndClient.SendPayment(paymentRequest, timeout);
             await stream.MoveNext(CancellationToken.None);
             return stream.Current;
         }
@@ -218,6 +217,11 @@ namespace LNDExcel
         public StopResponse StopDaemon()
         {
             return LndClient.StopDaemon();
+        }
+
+        public QueryRoutesResponse QueryRoutes(PayReq payReq)
+        {
+            return LndClient.QueryRoutes(payReq.Destination, payReq.NumSatoshis, maxRoutes: 3);
         }
     }
 }

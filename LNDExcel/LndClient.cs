@@ -1,10 +1,12 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Security;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Google.Protobuf;
+using Google.Protobuf.Collections;
 using Grpc.Core;
 using Lnrpc;
 using Microsoft.Office.Interop.Excel;
@@ -90,7 +92,9 @@ namespace LNDExcel
             set => _caCertString = value;
         }
 
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         public async Task AsyncAuthInterceptor(AuthInterceptorContext context, Metadata metadata)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             metadata.Add(new Metadata.Entry("macaroon", MacaroonString));
         }
@@ -177,12 +181,30 @@ namespace LNDExcel
             return response;
         } 
 
-        public IAsyncStreamReader<SendResponse> SendPayment(string paymentRequest, int timeout)
+        public IAsyncStreamReader<SendResponse> SendPayment(PayReq paymentRequest, int timeout)
         {
             var deadline = DateTime.UtcNow.AddSeconds(timeout);
             var duplexPaymentStreaming = GetLightningClient().SendPayment(Metadata.Empty, deadline, CancellationToken.None);
-            var request = new SendRequest { PaymentRequest = paymentRequest };
+            var request = new SendRequest
+            {
+                Amt = paymentRequest.NumSatoshis,
+                DestString = paymentRequest.Description
+            };
             duplexPaymentStreaming.RequestStream.WriteAsync(request);
+            return duplexPaymentStreaming.ResponseStream;
+        }
+
+        public IAsyncStreamReader<SendResponse> SendToRoute(PayReq paymentRequest, RepeatedField<Route> routes, int timeout)
+        {
+            var deadline = DateTime.UtcNow.AddSeconds(timeout);
+            var duplexPaymentStreaming = GetLightningClient().SendToRoute(Metadata.Empty, deadline, CancellationToken.None);
+            var request = new SendToRouteRequest
+            {
+                PaymentHashString = paymentRequest.PaymentHash
+            };
+            request.Routes.Add(routes);
+            duplexPaymentStreaming.RequestStream.WriteAsync(request);
+
             return duplexPaymentStreaming.ResponseStream;
         }
 
@@ -233,6 +255,21 @@ namespace LNDExcel
         {
             var request = new StopRequest();
             var response = GetLightningClient().StopDaemon(request);
+            return response;
+        }
+
+        public QueryRoutesResponse QueryRoutes(string pubkey, long amount, long maxFixedFee = 0, long maxPercentFee = 0, int finalCltvDelta = 0, int maxRoutes = 10)
+        {
+            var request = new QueryRoutesRequest
+            {
+                Amt = amount,
+                FeeLimit =
+                    maxFixedFee > 0 ? new FeeLimit {Fixed = maxFixedFee} : new FeeLimit {Percent = maxPercentFee},
+                FinalCltvDelta = finalCltvDelta,
+                NumRoutes = maxRoutes,
+                PubKey = pubkey
+            };
+            var response = GetLightningClient().QueryRoutes(request);
             return response;
         }
     }
