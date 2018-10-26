@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Security;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,15 +12,117 @@ using Channel = Grpc.Core.Channel;
 
 namespace LNDExcel
 {
+    public class LndClientConfiguration
+    {
+        private string _macaroonPath;
+        private string _macaroonString;
+        private string _caCertPath;
+        private string _caCertString;
+
+        public string Network = "testnet";
+        public string Host = "localhost";
+        public int Port = 10009;
+        public string Password = "test_password";
+
+        public static string LndDataPath
+        {
+            get
+            {
+                var localAppData = Environment.GetEnvironmentVariable("LocalAppData");
+                string[] lndPaths = { localAppData, "Lnd" };
+                var lndPath = Path.Combine(lndPaths);
+                return lndPath;
+            }
+        }
+        
+        public string MacaroonString
+        {
+            get
+            {
+                if (_macaroonString != null) return _macaroonString;
+
+                var macaroonBytes = File.ReadAllBytes(MacaroonPath);
+                var macaroonString = BitConverter.ToString(macaroonBytes).Replace("-", "").ToLower();
+                return macaroonString;
+            }
+            set => _macaroonString = value;
+        }
+
+        public string MacaroonPath
+        {
+            get
+            {
+                if (_macaroonPath != null) return _macaroonPath;
+                string[] macaroonPaths = { LndDataPath, "data", "chain", "bitcoin", Network, "admin.macaroon" };
+                var macaroonPath = Path.Combine(macaroonPaths);
+                return macaroonPath;
+            }
+            set => _macaroonPath = value;
+        }
+
+        private SslCredentials GetSslCredentials()
+        {
+            var ssl = new SslCredentials(CaCertString);
+            return ssl;
+        }
+
+        public string CaCertPath
+        {
+            get
+            {
+                if (_caCertPath != null) return _caCertPath;
+
+                string[] caCertPaths = { LndDataPath, "tls.cert" };
+                var caCertPath = Path.Combine(caCertPaths);
+                return caCertPath;
+            }
+            set => _caCertPath = value;
+        }
+
+        public string CaCertString
+        {
+            get
+            {
+                if (_caCertString != null) return _caCertString;
+                var caCert = File.ReadAllText(CaCertPath);
+                return caCert;
+            }
+            set => _caCertString = value;
+        }
+
+        public async Task AsyncAuthInterceptor(AuthInterceptorContext context, Metadata metadata)
+        {
+            metadata.Add(new Metadata.Entry("macaroon", MacaroonString));
+        }
+        
+        public Channel RpcChannel
+        {
+            get
+            {
+                var callCredentials = CallCredentials.FromInterceptor(AsyncAuthInterceptor);
+                var channelCredentials = ChannelCredentials.Create(GetSslCredentials(), callCredentials);
+                var channel = new Channel(Host, Port, channelCredentials);
+                return channel;
+            }
+        }
+
+    }
+
     public class LndClient
     {
+        public LndClientConfiguration Config;
 
-        private void TryUnlockWallet(string password)
+        public LndClient()
+        {
+            Config = new LndClientConfiguration();
+        }
+
+        public void TryUnlockWallet(string password)
         {
             try
             {
                 // ReSharper disable once UnusedVariable
-                UnlockWalletResponse response = UnlockWallet(password);
+                var response = UnlockWallet(password);
                 Thread.Sleep(3000);
             }
             catch (RpcException e)
@@ -37,55 +140,14 @@ namespace LNDExcel
 
         private Lightning.LightningClient GetLightningClient()
         {
-            return new Lightning.LightningClient(RpcChannel);
+            return new Lightning.LightningClient(Config.RpcChannel);
         }
 
         private WalletUnlocker.WalletUnlockerClient GetWalletUnlockerClient()
         {
-            return new WalletUnlocker.WalletUnlockerClient(RpcChannel);
+            return new WalletUnlocker.WalletUnlockerClient(Config.RpcChannel);
         }
-
-        private static string LndDataPath
-        {
-            get
-            {
-                var localAppData = Environment.GetEnvironmentVariable("LocalAppData");
-                string[] lndPaths = { localAppData, "Lnd" };
-                var lndPath = Path.Combine(lndPaths);
-                return lndPath;
-            }
-        }
-
-        private async Task AsyncAuthInterceptor(AuthInterceptorContext context, Metadata metadata)
-        {
-            string[] macaroonPaths = { LndDataPath, "data", "chain", "bitcoin", "testnet", "admin.macaroon" };
-            var macaroonPath = Path.Combine(macaroonPaths);
-            var macaroonBytes = File.ReadAllBytes(macaroonPath);
-            var macaroonString = BitConverter.ToString(macaroonBytes).Replace("-", "").ToLower();
-            metadata.Add(new Metadata.Entry("macaroon", macaroonString));
-        }
-
-        private Channel RpcChannel
-        {
-            get
-            {
-                var callCredentials = CallCredentials.FromInterceptor(AsyncAuthInterceptor);
-                var sslCredentials = GetSslCredentials(LndDataPath);
-                var channelCredentials = ChannelCredentials.Create(sslCredentials, callCredentials);
-                Channel channel = new Channel("localhost", 10009, channelCredentials);
-                return channel;
-            }
-        }
-
-        private SslCredentials GetSslCredentials(string lndDataPath)
-        {
-            string[] caCertPaths = {lndDataPath , "tls.cert" };
-            var caCertPath = Path.Combine(caCertPaths);
-            var caCert = File.ReadAllText(caCertPath);
-            var ssl = new SslCredentials(caCert);
-            return ssl;
-        }
-
+        
         public UnlockWalletResponse UnlockWallet(string password)
         {
             var pw = ByteString.CopyFrom(password, Encoding.UTF8);
@@ -96,22 +158,22 @@ namespace LNDExcel
 
         public GetInfoResponse GetInfo()
         {
-            GetInfoRequest request = new GetInfoRequest();
-            GetInfoResponse response = GetLightningClient().GetInfo(request);
+            var request = new GetInfoRequest();
+            var response = GetLightningClient().GetInfo(request);
             return response;
         }
 
         public NewAddressResponse NewAddress(NewAddressRequest.Types.AddressType addressType = NewAddressRequest.Types.AddressType.WitnessPubkeyHash)
         {
-            NewAddressRequest request = new NewAddressRequest { Type = addressType };
-            NewAddressResponse response = GetLightningClient().NewAddress(request);
+            var request = new NewAddressRequest { Type = addressType };
+            var response = GetLightningClient().NewAddress(request);
             return response;
         }
 
         public ListChannelsResponse ListChannels()
         {
-            ListChannelsRequest request = new ListChannelsRequest();
-            ListChannelsResponse response = GetLightningClient().ListChannels(request);
+            var request = new ListChannelsRequest();
+            var response = GetLightningClient().ListChannels(request);
             return response;
         } 
 
@@ -119,37 +181,58 @@ namespace LNDExcel
         {
             var deadline = DateTime.UtcNow.AddSeconds(timeout);
             var duplexPaymentStreaming = GetLightningClient().SendPayment(Metadata.Empty, deadline, CancellationToken.None);
-            SendRequest request = new SendRequest { PaymentRequest = paymentRequest };
+            var request = new SendRequest { PaymentRequest = paymentRequest };
             duplexPaymentStreaming.RequestStream.WriteAsync(request);
             return duplexPaymentStreaming.ResponseStream;
         }
 
         public SendResponse SyncSendPayment(string paymentRequest)
         {
-            SendRequest request = new SendRequest {PaymentRequest = paymentRequest};
+            var request = new SendRequest {PaymentRequest = paymentRequest};
             var deadline = DateTime.UtcNow.AddSeconds(30);
-            SendResponse response = GetLightningClient().SendPaymentSync(request, deadline: deadline);
+            var response = GetLightningClient().SendPaymentSync(request, deadline: deadline);
             return response;
         }
 
         public PayReq DecodePaymentRequest(string paymentRequest)
         {
-            PayReqString request = new PayReqString {PayReq = paymentRequest};
-            PayReq response = GetLightningClient().DecodePayReq(request);
+            var request = new PayReqString {PayReq = paymentRequest};
+            var response = GetLightningClient().DecodePayReq(request);
             return response;
         }
 
         public ListPaymentsResponse ListPayments()
         {
-            ListPaymentsRequest request = new ListPaymentsRequest();
-            ListPaymentsResponse response = GetLightningClient().ListPayments(request);
+            var request = new ListPaymentsRequest();
+            var response = GetLightningClient().ListPayments(request);
             return response;
         }
 
         public TransactionDetails GetTransactions()
         {
-            GetTransactionsRequest request = new GetTransactionsRequest();
-            TransactionDetails response = GetLightningClient().GetTransactions(request);
+            var request = new GetTransactionsRequest();
+            var response = GetLightningClient().GetTransactions(request);
+            return response;
+        }
+
+        public WalletBalanceResponse WalletBalance()
+        {
+            var request = new WalletBalanceRequest();
+            var response = GetLightningClient().WalletBalance(request);
+            return response;
+        }
+        
+        public ChannelBalanceResponse ChannelBalance()
+        {
+            var request = new ChannelBalanceRequest();
+            var response = GetLightningClient().ChannelBalance(request);
+            return response;
+        }
+
+        public StopResponse StopDaemon()
+        {
+            var request = new StopRequest();
+            var response = GetLightningClient().StopDaemon(request);
             return response;
         }
     }

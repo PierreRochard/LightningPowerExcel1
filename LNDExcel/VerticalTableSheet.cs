@@ -11,14 +11,13 @@ namespace LNDExcel
     {
         public AsyncLightningApp LApp;
         public Worksheet Ws;
+        public TMessageClass Data;
 
         private int _startRow;
         private int _dataStartRow;
         private int _startColumn;
         private int _endColumn;
         private int _endRow;
-
-        private TMessageClass _data;
         private readonly IList<FieldDescriptor> _fields;
         private readonly IReadOnlyCollection<string> _excludeList;
 
@@ -72,7 +71,7 @@ namespace LNDExcel
                 headerCell.Value2 = fieldName;
 
                 var rowRange = Ws.Range[Ws.Cells[rowNumber, _startColumn], Ws.Cells[rowNumber, _endColumn]];
-                Formatting.VerticalTableRow(rowRange, rowNumber % 2 == 0);
+                Formatting.VerticalTableRow(rowRange, rowNumber);
 
                 rowIndex++;
             }
@@ -82,13 +81,13 @@ namespace LNDExcel
         {
             var data = Ws.Range[Ws.Cells[_dataStartRow, _endColumn], Ws.Cells[_endRow, _endColumn]];
             data.ClearContents();
-            _data = default(TMessageClass);
+            Data = default(TMessageClass);
         }
 
         public void Update(TMessageClass newMessage)
         {
-            var isCached = _data != null;
-            if (isCached && _data.Equals(newMessage))
+            var isCached = Data != null;
+            if (isCached && Data.Equals(newMessage))
             {
                 return;
             }
@@ -99,11 +98,11 @@ namespace LNDExcel
             }
             else
             {
-                Update(newMessage, _data);
+                Update(newMessage, Data);
             }
 
-            Ws.Range["A:C"].Columns.AutoFit();
-            Ws.Range["A:C"].Rows.AutoFit();
+            Ws.Range["A:AA"].Columns.AutoFit();
+            Ws.Range["A:AA"].Rows.AutoFit();
         }
 
         public void Populate(TMessageClass newMessage)
@@ -131,9 +130,10 @@ namespace LNDExcel
                     value = field.Accessor.GetValue(newMessage).ToString();
                 }
                 dataCell.Value2 = value;
+                Ws.Names.Add(field.Name, dataCell);
                 rowIndex++;
             }
-            _data = newMessage;
+            Data = newMessage;
         }
 
         public void Update(TMessageClass newMessage, TMessageClass oldMessage)
@@ -167,7 +167,7 @@ namespace LNDExcel
 
                 dataCell.Value2 = value;
             }
-            _data = newMessage;
+            Data = newMessage;
 
         }
     }

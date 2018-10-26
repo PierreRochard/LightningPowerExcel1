@@ -17,7 +17,7 @@ namespace LNDExcel
         private int _startColumn;
         private int _endColumn;
 
-        private Dictionary<object, TMessageClass> _data;
+        public Dictionary<object, TMessageClass> Data;
         private readonly MessageDescriptor _messageDescriptor;
         private readonly IFieldAccessor _uniqueKeyField;
         private readonly string _uniqueKeyName;
@@ -26,7 +26,7 @@ namespace LNDExcel
         {
             Ws = ws;
             LApp = lApp;
-            _data = new Dictionary<object, TMessageClass>();
+            Data = new Dictionary<object, TMessageClass>();
             _messageDescriptor = messageDescriptor;
             _uniqueKeyName = uniqueKeyName;
             var fields = messageDescriptor.Fields.InDeclarationOrder();
@@ -75,13 +75,13 @@ namespace LNDExcel
             foreach (var newMessage in data)
             {
                 var uniqueKey = _uniqueKeyField.GetValue(newMessage);
-                var isCached = _data.TryGetValue(uniqueKey, out var cachedMessage);
+                var isCached = Data.TryGetValue(uniqueKey, out var cachedMessage);
                 if (isCached && cachedMessage.Equals(newMessage))
                 {
                     continue;
                 }
 
-                _data[uniqueKey] = newMessage;
+                Data[uniqueKey] = newMessage;
 
                 if (!isCached)
                 {
@@ -93,7 +93,7 @@ namespace LNDExcel
                 }
             }
 
-            foreach (var cachedUniqueKey in _data.Keys)
+            foreach (var cachedUniqueKey in Data.Keys)
             {
                 var result = data.FirstOrDefault(newMessage => _uniqueKeyField.GetValue(newMessage).ToString() == cachedUniqueKey.ToString());
                 if (result == null)
@@ -232,7 +232,7 @@ namespace LNDExcel
         {
             var data = Ws.Range[Ws.Cells[_headerRow + 1, _startColumn], Ws.Cells[GetLastRow(), _endColumn]];
             data.ClearContents();
-            _data = new Dictionary<object, TMessageClass>();
+            Data = new Dictionary<object, TMessageClass>();
         }
     }
 }

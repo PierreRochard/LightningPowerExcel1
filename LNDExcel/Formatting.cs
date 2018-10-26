@@ -98,8 +98,9 @@ namespace LNDExcel
             cells.NumberFormat = "0";
         }
 
-        public static void VerticalTableRow(Range cells, bool isEven)
+        public static void VerticalTableRow(Range cells, int rowNumber)
         {
+            var isEven = rowNumber % 2 == 0;
             cells.Interior.Color = isEven ? Color.LightYellow : Color.White;
         }
 

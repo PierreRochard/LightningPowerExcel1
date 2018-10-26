@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -10,13 +11,14 @@ namespace LNDExcel
     public class NodeSheet
     {
         public Worksheet Ws;
+        public bool isProcessOurs = false;
 
         public NodeSheet(Worksheet ws)
         {
             Ws = ws;
         }
 
-        public void ConnectLocalNode()
+        public void StartLocalNode()
         {
             var bw = new BackgroundWorker { WorkerReportsProgress = true, WorkerSupportsCancellation = true };
             if (SynchronizationContext.Current == null)
@@ -36,6 +38,8 @@ namespace LNDExcel
 
         private void RunLnd(object sender, DoWorkEventArgs e)
         {
+            if (isProcessOurs) return;
+
             var processes = Process.GetProcessesByName("tempfileLND");
             foreach (var t in processes)
             {
@@ -45,13 +49,21 @@ namespace LNDExcel
             var lndProcesses = Process.GetProcessesByName("lnd");
             if (lndProcesses.Length > 0)
             {
-                WriteToLog("LND is already running, not spawning a process.");
+                WriteToLog("LND is already running, not spawning a process and thus unable to redirect log output to this tab.");
                 return;
             }
 
             const string exeName = "tempfileLND.exe";
             var path = Path.Combine(Path.GetTempPath(), exeName);
-            File.WriteAllBytes(path, Properties.Resources.lnd);
+            try
+            {
+                File.WriteAllBytes(path, Properties.Resources.lnd);
+            }
+            catch (IOException exception)
+            {
+                return;
+            }
+
             var nodeProcess = new Process
             {
                 StartInfo = new ProcessStartInfo
@@ -61,6 +73,8 @@ namespace LNDExcel
                                 "--bitcoin.testnet " +
                                 "--autopilot.active " +
                                 "--autopilot.maxchannels=10 " +
+                                "--autopilot.allocation=1 " +
+                                "--autopilot.minchansize=600000 " +
                                 "--autopilot.private " +
                                 "--bitcoin.node=neutrino " +
                                 "--neutrino.connect=faucet.lightning.community " +
@@ -72,7 +86,7 @@ namespace LNDExcel
                 }
             };
             nodeProcess.Start();
-
+            isProcessOurs = true;
             nodeProcess.EnableRaisingEvents = true;
             nodeProcess.OutputDataReceived += (o, args) =>
                 NodeProcessOutputDataReceived(o, args, (BackgroundWorker) sender);

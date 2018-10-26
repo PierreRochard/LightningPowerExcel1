@@ -202,6 +202,7 @@
   -->
   <ItemGroup>
     <Compile Include="BalancesSheet.cs" />
+    <Compile Include="ConnectSheet.cs" />
     <Compile Include="NodesSheet.cs" />
     <Compile Include="Formatting.cs" />
     <Compile Include="AsyncLightningApp.cs" />

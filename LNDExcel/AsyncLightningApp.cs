@@ -8,6 +8,7 @@ using Google.Protobuf;
 using Google.Protobuf.Collections;
 using Grpc.Core;
 using Lnrpc;
+using Microsoft.Office.Interop.Excel;
 using Channel = Lnrpc.Channel;
 
 namespace LNDExcel
@@ -20,6 +21,20 @@ namespace LNDExcel
         public AsyncLightningApp(ThisAddIn excelAddIn)
         {
             _excelAddIn = excelAddIn;
+            LndClient = new LndClient();
+        }
+
+        public void Connect()
+        {
+            if (LndClient.Config.Host == "localhost")
+            {
+                _excelAddIn.NodesSheet.StartLocalNode();
+            }
+            LndClient.TryUnlockWallet(LndClient.Config.Password);
+            Refresh(SheetNames.Payments);
+            Refresh(SheetNames.OpenChannels);
+            Refresh(SheetNames.Balances);
+            Refresh(SheetNames.Connect);
         }
 
         public void Refresh(string sheetName)
@@ -31,25 +46,31 @@ namespace LNDExcel
                 SynchronizationContext.SetSynchronizationContext(new WindowsFormsSynchronizationContext());
             }
 
-            Utilities.MarkAsLoadingTable(_excelAddIn.Wb.Sheets[sheetName]);
+            Worksheet ws = _excelAddIn.Wb.Sheets[sheetName];
+            Utilities.MarkAsLoadingTable(ws);
+            _excelAddIn.Wb.Sheets[sheetName].Activate();
             switch (sheetName)
             {
-                case SheetNames.GetInfo:
-                    bw.DoWork += (o, args) => BwQuery(o, args, LndClient.GetInfo);
-                    bw.RunWorkerCompleted += (o, args) => BwVerticalListCompleted(o, args, _excelAddIn.GetInfoSheet);
-                    break;
                 case SheetNames.OpenChannels:
-                    bw.DoWork += (o, args) => BwQuery(o, args, _excelAddIn.LndClient.ListChannels);
+                    bw.DoWork += (o, args) => BwQuery(o, args, LndClient.ListChannels);
                     bw.RunWorkerCompleted += (o, args) =>
                         BwListCompleted<Channel, ListChannelsResponse>(o, args, _excelAddIn.ChannelsSheet);
                     break;
                 case SheetNames.Payments:
-                    bw.DoWork += (o, args) => BwQuery(o, args, _excelAddIn.LndClient.ListPayments);
+                    bw.DoWork += (o, args) => BwQuery(o, args, LndClient.ListPayments);
                     bw.RunWorkerCompleted += (o, args) =>
                         BwListCompleted<Payment, ListPaymentsResponse>(o, args, _excelAddIn.PaymentsSheet);
                     break;
-                case SheetNames.Nodes:
+                case SheetNames.NodeLog:
                     Utilities.RemoveLoadingMark(_excelAddIn.Wb.Sheets[sheetName]);
+                    break;
+                case SheetNames.Connect:
+                    bw.DoWork += (o, args) => BwQuery(o, args, LndClient.GetInfo);
+                    bw.RunWorkerCompleted += (o, args) => BwConnectCompleted(o, args, _excelAddIn.ConnectSheet);
+                    break;
+                case SheetNames.Balances:
+                    bw.DoWork += BwBalancesQuery;
+                    bw.RunWorkerCompleted += BwBalancesCompleted;
                     break;
                 default:
                     Utilities.RemoveLoadingMark(_excelAddIn.Wb.Sheets[sheetName]);
@@ -59,31 +80,67 @@ namespace LNDExcel
             bw.RunWorkerAsync();
         }
 
+        private void BwBalancesCompleted(object sender, RunWorkerCompletedEventArgs e)
+        {
+            var result = (Tuple<WalletBalanceResponse, ChannelBalanceResponse>)e.Result;
+            _excelAddIn.BalancesSheet.ChannelBalanceSheet.Update(result.Item2);
+            _excelAddIn.BalancesSheet.WalletBalanceSheet.Update(result.Item1);
+            Utilities.RemoveLoadingMark(_excelAddIn.Wb.Sheets[SheetNames.Balances]);
+        }
+
+        private void BwBalancesQuery(object sender, DoWorkEventArgs e)
+        {
+            var walletBalance = LndClient.WalletBalance();
+            var channelBalance = LndClient.ChannelBalance();
+            var result = Tuple.Create(walletBalance, channelBalance);
+            e.Result = result;
+        }
+
+        // ReSharper disable once UnusedParameter.Local
+        private void BwConnectCompleted(object sender, RunWorkerCompletedEventArgs e, ConnectSheet connectSheet)
+        {
+            try
+            {
+                var response = (GetInfoResponse)e.Result;
+                connectSheet.GetInfoSheet.Update(response);
+                connectSheet.FormatDimensions();
+            }
+            catch (System.Reflection.TargetInvocationException exception)
+            {
+                var rpcException = (RpcException) exception.InnerException;
+                _excelAddIn.ConnectSheet.DisplayError("Connect error", rpcException?.Status.Detail);
+                _excelAddIn.ConnectSheet.Ws.Activate();
+            }
+            Utilities.RemoveLoadingMark(connectSheet.Ws);
+        }
+
         // ReSharper disable once UnusedParameter.Local
         private static void BwQuery(object sender, DoWorkEventArgs e, Func<IMessage> query)
         {
             e.Result = query();
         }
-
-        // ReSharper disable once UnusedParameter.Local
-        private void BwVerticalListCompleted<TResponse>(object sender, RunWorkerCompletedEventArgs e, VerticalTableSheet<TResponse> tableSheet) where TResponse : IMessage
-        {
-            var response = (TResponse)e.Result;
-            tableSheet.Update(response);
-            Utilities.RemoveLoadingMark(tableSheet.Ws);
-        }
         
         // ReSharper disable once UnusedParameter.Local
-        private static void BwListCompleted<TMessage, TResponse>(object sender, RunWorkerCompletedEventArgs e,
+        private void BwListCompleted<TMessage, TResponse>(object sender, RunWorkerCompletedEventArgs e,
             TableSheet<TMessage> tableSheet) where TMessage : IMessage where TResponse : IMessage
         {
-            var response = (TResponse)e.Result;
-            var fieldDescriptor = response.Descriptor.Fields.InDeclarationOrder().FirstOrDefault(f => f.IsRepeated);
-            if (fieldDescriptor == null) return;
+            try
+            {
+                var response = (TResponse)e.Result;
+                var fieldDescriptor = response.Descriptor.Fields.InDeclarationOrder().FirstOrDefault(f => f.IsRepeated);
+                if (fieldDescriptor == null) return;
 
-            var data = (RepeatedField<TMessage>)fieldDescriptor.Accessor.GetValue(response);
-            tableSheet.Update(data);
+                var data = (RepeatedField<TMessage>)fieldDescriptor.Accessor.GetValue(response);
+                tableSheet.Update(data);
+            }
+            catch (System.Reflection.TargetInvocationException exception)
+            {
+                var rpcException = (RpcException)exception.InnerException;
+                _excelAddIn.ConnectSheet.DisplayError("Connect error", rpcException?.Status.Detail);
+                _excelAddIn.ConnectSheet.Ws.Activate();
+            }
             Utilities.RemoveLoadingMark(tableSheet.Ws);
+
         }
 
         public void SendPayment(string paymentRequest)
@@ -132,7 +189,7 @@ namespace LNDExcel
         // ReSharper disable once UnusedParameter.Local
         private async Task<SendResponse> SendPaymentAsync(object sender, string paymentRequest, int timeout)
         {
-            var stream = _excelAddIn.LndClient.SendPayment(paymentRequest, timeout);
+            var stream = LndClient.SendPayment(paymentRequest, timeout);
 
             await stream.MoveNext(CancellationToken.None);
             return stream.Current;
@@ -153,5 +210,14 @@ namespace LNDExcel
         }
 
 
+        public PayReq DecodePaymentRequest(string payReq)
+        {
+            return LndClient.DecodePaymentRequest(payReq);
+        }
+
+        public StopResponse StopDaemon()
+        {
+            return LndClient.StopDaemon();
+        }
     }
 }

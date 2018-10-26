@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
+using Grpc.Core;
 using Lnrpc;
 using Microsoft.Office.Interop.Excel;
+using Channel = Lnrpc.Channel;
 
 namespace LNDExcel
 {
@@ -12,11 +14,12 @@ namespace LNDExcel
         public AsyncLightningApp LApp;
         public Workbook Wb;
 
-        public NodeSheet NodesSheet;
-        public VerticalTableSheet<GetInfoResponse> GetInfoSheet;
+        public ConnectSheet ConnectSheet;
+        public BalancesSheet BalancesSheet;
         public TableSheet<Channel> ChannelsSheet;
         public TableSheet<Payment> PaymentsSheet;
         public SendPaymentSheet SendPaymentSheet;
+        public NodeSheet NodesSheet;
 
         private void ThisAddIn_Startup(object sender, EventArgs e)
         {
@@ -27,7 +30,7 @@ namespace LNDExcel
         {
             try
             {
-                if (Application.Sheets[SheetNames.GetInfo].Cells[1, 1].Value2 == "LNDExcel")
+                if (Application.Sheets[SheetNames.Connect].Cells[1, 1].Value2 == "LNDExcel")
                 {
                     return true;
                 }
@@ -52,12 +55,14 @@ namespace LNDExcel
         public void SetupWorkbook(Workbook wb)
         {
             Wb = wb;
-            CreateSheet(SheetNames.Nodes);
-            NodesSheet = new NodeSheet(Wb.Sheets[SheetNames.Nodes]);
-            
-            CreateSheet(SheetNames.GetInfo);
-            GetInfoSheet = new VerticalTableSheet<GetInfoResponse>(Wb.Sheets[SheetNames.GetInfo], LApp, GetInfoResponse.Descriptor);
-            GetInfoSheet.SetupVerticalTable("LND Node Info");
+            LApp = new AsyncLightningApp(this);
+
+            CreateSheet(SheetNames.Connect);
+            ConnectSheet = new ConnectSheet(Wb.Sheets[SheetNames.Connect], LApp);
+            ConnectSheet.PopulateConfig();
+
+            CreateSheet(SheetNames.Balances);
+            BalancesSheet = new BalancesSheet(Wb.Sheets[SheetNames.Balances], LApp);
 
             CreateSheet(SheetNames.OpenChannels);
             ChannelsSheet = new TableSheet<Channel>(Wb.Sheets[SheetNames.OpenChannels], LApp, Channel.Descriptor, "chan_id");
@@ -71,18 +76,13 @@ namespace LNDExcel
             SendPaymentSheet = new SendPaymentSheet(Wb.Sheets[SheetNames.SendPayment], LApp);
             SendPaymentSheet.InitializePaymentRequest();
 
+            CreateSheet(SheetNames.NodeLog);
+            NodesSheet = new NodeSheet(Wb.Sheets[SheetNames.NodeLog]);
+
             MarkLndExcelWorkbook();
-            GetInfoSheet.Ws.Activate();
+            ConnectSheet.Ws.Activate();
 
             Application.SheetActivate += Workbook_SheetActivate;
-        }
-
-        private void ConnectLnd()
-        {
-            LApp = new AsyncLightningApp(this);
-            LApp.Refresh(SheetNames.GetInfo);
-            LApp.Refresh(SheetNames.OpenChannels);
-            LApp.Refresh(SheetNames.Payments);
         }
 
         private void CreateSheet(string worksheetName)
@@ -96,7 +96,7 @@ namespace LNDExcel
             }
             catch (COMException)
             {
-                Globals.ThisAddIn.Wb.Sheets.Add();
+                Globals.ThisAddIn.Wb.Sheets.Add(After: Wb.Sheets[Wb.Sheets.Count]);
                 ws = Wb.ActiveSheet;
                 ws.Name = worksheetName;
                 ws.Range["A:AZ"].Interior.Color = Color.White;
@@ -116,13 +116,23 @@ namespace LNDExcel
 
         private void MarkLndExcelWorkbook()
         {
-            Worksheet ws = Wb.Sheets[SheetNames.GetInfo];
+            Worksheet ws = Wb.Sheets[SheetNames.Connect];
             ws.Cells[1, 1].Value2 = "LNDExcel";
             ws.Cells[1, 1].Font.Color = Color.White;
         }
         
         private void ThisAddIn_Shutdown(object sender, EventArgs e)
         {
+            if (!NodesSheet.isProcessOurs) return;
+
+            try
+            {
+                LApp.StopDaemon();
+            }
+            catch (RpcException exception)
+            {
+                NodesSheet.isProcessOurs = false;
+            }
         }
 
         #region VSTO generated code
