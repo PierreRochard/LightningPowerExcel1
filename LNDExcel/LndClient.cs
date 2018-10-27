@@ -148,7 +148,14 @@ namespace LNDExcel
         {
             return new WalletUnlocker.WalletUnlockerClient(Config.RpcChannel);
         }
-        
+
+        public StopResponse StopDaemon()
+        {
+            var request = new StopRequest();
+            var response = GetLightningClient().StopDaemon(request);
+            return response;
+        }
+
         public UnlockWalletResponse UnlockWallet(string password)
         {
             var pw = ByteString.CopyFrom(password, Encoding.UTF8);
@@ -164,6 +171,20 @@ namespace LNDExcel
             return response;
         }
 
+        public WalletBalanceResponse WalletBalance()
+        {
+            var request = new WalletBalanceRequest();
+            var response = GetLightningClient().WalletBalance(request);
+            return response;
+        }
+
+        public TransactionDetails GetTransactions()
+        {
+            var request = new GetTransactionsRequest();
+            var response = GetLightningClient().GetTransactions(request);
+            return response;
+        }
+
         public NewAddressResponse NewAddress(NewAddressRequest.Types.AddressType addressType = NewAddressRequest.Types.AddressType.WitnessPubkeyHash)
         {
             var request = new NewAddressRequest { Type = addressType };
@@ -176,7 +197,58 @@ namespace LNDExcel
             var request = new ListChannelsRequest();
             var response = GetLightningClient().ListChannels(request);
             return response;
-        } 
+        }
+
+        public ChannelBalanceResponse ChannelBalance()
+        {
+            var request = new ChannelBalanceRequest();
+            var response = GetLightningClient().ChannelBalance(request);
+            return response;
+        }
+
+        public CloseStatusUpdate CloseChannel(string channelPoint, bool force)
+        {
+            var request = new CloseChannelRequest
+            {
+                ChannelPoint = new ChannelPoint
+                {
+                    FundingTxidBytes = ByteString.CopyFromUtf8(channelPoint.Split(':')[0]),
+                    OutputIndex = uint.Parse(channelPoint.Split(':')[1])
+                }
+            };
+            var stream = GetLightningClient().CloseChannel(request).ResponseStream;
+            stream.MoveNext(CancellationToken.None);
+            return stream.Current;
+        }
+
+        public ListPaymentsResponse ListPayments()
+        {
+            var request = new ListPaymentsRequest();
+            var response = GetLightningClient().ListPayments(request);
+            return response;
+        }
+
+        public PayReq DecodePaymentRequest(string paymentRequest)
+        {
+            var request = new PayReqString {PayReq = paymentRequest};
+            var response = GetLightningClient().DecodePayReq(request);
+            return response;
+        }
+
+        public QueryRoutesResponse QueryRoutes(string pubkey, long amount, long maxFixedFee = 0, long maxPercentFee = 0, int finalCltvDelta = 144, int maxRoutes = 10)
+        {
+            var request = new QueryRoutesRequest
+            {
+                Amt = amount,
+                FeeLimit =
+                    maxFixedFee > 0 ? new FeeLimit { Fixed = maxFixedFee } : maxPercentFee > 0 ? new FeeLimit { Percent = maxPercentFee } : null,
+                FinalCltvDelta = finalCltvDelta,
+                NumRoutes = maxRoutes,
+                PubKey = pubkey
+            };
+            var response = GetLightningClient().QueryRoutes(request);
+            return response;
+        }
 
         public IAsyncStreamReader<SendResponse> SendPayment(PayReq paymentRequest, int timeout)
         {
@@ -207,82 +279,10 @@ namespace LNDExcel
 
         public SendResponse SyncSendPayment(string paymentRequest)
         {
-            var request = new SendRequest {PaymentRequest = paymentRequest};
+            var request = new SendRequest { PaymentRequest = paymentRequest };
             var deadline = DateTime.UtcNow.AddSeconds(30);
             var response = GetLightningClient().SendPaymentSync(request, deadline: deadline);
             return response;
-        }
-
-        public PayReq DecodePaymentRequest(string paymentRequest)
-        {
-            var request = new PayReqString {PayReq = paymentRequest};
-            var response = GetLightningClient().DecodePayReq(request);
-            return response;
-        }
-
-        public ListPaymentsResponse ListPayments()
-        {
-            var request = new ListPaymentsRequest();
-            var response = GetLightningClient().ListPayments(request);
-            return response;
-        }
-
-        public TransactionDetails GetTransactions()
-        {
-            var request = new GetTransactionsRequest();
-            var response = GetLightningClient().GetTransactions(request);
-            return response;
-        }
-
-        public WalletBalanceResponse WalletBalance()
-        {
-            var request = new WalletBalanceRequest();
-            var response = GetLightningClient().WalletBalance(request);
-            return response;
-        }
-        
-        public ChannelBalanceResponse ChannelBalance()
-        {
-            var request = new ChannelBalanceRequest();
-            var response = GetLightningClient().ChannelBalance(request);
-            return response;
-        }
-
-        public StopResponse StopDaemon()
-        {
-            var request = new StopRequest();
-            var response = GetLightningClient().StopDaemon(request);
-            return response;
-        }
-
-        public QueryRoutesResponse QueryRoutes(string pubkey, long amount, long maxFixedFee = 0, long maxPercentFee = 0, int finalCltvDelta = 144, int maxRoutes = 10)
-        {
-            var request = new QueryRoutesRequest
-            {
-                Amt = amount,
-                FeeLimit =
-                    maxFixedFee > 0 ? new FeeLimit {Fixed = maxFixedFee} : maxPercentFee > 0 ? new FeeLimit {Percent = maxPercentFee} : null,
-                FinalCltvDelta = finalCltvDelta,
-                NumRoutes = maxRoutes,
-                PubKey = pubkey
-            };
-            var response = GetLightningClient().QueryRoutes(request);
-            return response;
-        }
-
-        public CloseStatusUpdate CloseChannel(string channelPoint, bool force)
-        {
-            var request = new CloseChannelRequest
-            {
-                ChannelPoint = new ChannelPoint
-                {
-                    FundingTxidBytes = ByteString.CopyFromUtf8(channelPoint.Split(':')[0]),
-                    OutputIndex =  uint.Parse(channelPoint.Split(':')[1])
-                }
-            };
-            var stream = GetLightningClient().CloseChannel(request).ResponseStream;
-            stream.MoveNext(CancellationToken.None);
-            return stream.Current;
         }
     }
 }
