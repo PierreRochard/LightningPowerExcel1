@@ -16,8 +16,10 @@ namespace LNDExcel
         public Workbook Wb;
 
         public ConnectSheet ConnectSheet;
+        public TableSheet<Peer> PeersSheet;
         public BalancesSheet BalancesSheet;
-        public TableSheet<Channel> ChannelsSheet;
+        public TableSheet<Channel> OpenChannelsSheet;
+        public PendingChannelsSheet PendingChannelsSheet;
         public TableSheet<Payment> PaymentsSheet;
         public SendPaymentSheet SendPaymentSheet;
         public NodeSheet NodesSheet;
@@ -62,17 +64,27 @@ namespace LNDExcel
             ConnectSheet = new ConnectSheet(Wb.Sheets[SheetNames.Connect], LApp);
             ConnectSheet.PopulateConfig();
 
+            CreateSheet(SheetNames.Peers);
+            var wideColumnsPeers = new List<string> { "pub_key" };
+            PeersSheet = new TableSheet<Peer>(Wb.Sheets[SheetNames.Peers], LApp, Peer.Descriptor, "pub_key", wideColumnsPeers);
+            PeersSheet.SetupTable("Peers", 3);
+
             CreateSheet(SheetNames.Balances);
             BalancesSheet = new BalancesSheet(Wb.Sheets[SheetNames.Balances], LApp);
 
             CreateSheet(SheetNames.OpenChannels);
-            var wideColumnsChans = new List<string> {"remote_pubkey", "channel_point", "pending_htlcs"};
-            ChannelsSheet = new TableSheet<Channel>(Wb.Sheets[SheetNames.OpenChannels], LApp, Channel.Descriptor, "chan_id", wideColumnsChans);
-            ChannelsSheet.SetupTable("Open Channels", 3);
+            var wideColumnsChannels = new List<string> {"remote_pubkey", "channel_point", "pending_htlcs"};
+            OpenChannelsSheet = new TableSheet<Channel>(Wb.Sheets[SheetNames.OpenChannels], LApp, Channel.Descriptor, "chan_id", wideColumnsChannels);
+            OpenChannelsSheet.SetupTable("Open Channels", 3);
+
+            CreateSheet(SheetNames.PendingChannels);
+            var wideColumnsPendingChannels = new List<string> {""};
+            PendingChannelsSheet = new PendingChannelsSheet(Wb.Sheets[SheetNames.PendingChannels], LApp);
+
 
             CreateSheet(SheetNames.Payments);
-            var wideColumnsPay = new List<string> { "payment_hash", "path", "payment_preimage"};
-            PaymentsSheet = new TableSheet<Payment>(Wb.Sheets[SheetNames.Payments], LApp, Payment.Descriptor, "payment_hash", wideColumnsPay);
+            var wideColumnsPayments = new List<string> { "payment_hash", "path", "payment_preimage"};
+            PaymentsSheet = new TableSheet<Payment>(Wb.Sheets[SheetNames.Payments], LApp, Payment.Descriptor, "payment_hash", wideColumnsPayments);
             PaymentsSheet.SetupTable("Payments", 3);
 
             CreateSheet(SheetNames.SendPayment);

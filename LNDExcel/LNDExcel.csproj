@@ -208,6 +208,7 @@
     <Compile Include="AsyncLightningApp.cs" />
     <Compile Include="FormSheet.cs" />
     <Compile Include="LndClient.cs" />
+    <Compile Include="PendingChannelsSheet.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>

@@ -34,6 +34,7 @@ namespace LNDExcel
             Refresh(SheetNames.Payments);
             Refresh(SheetNames.OpenChannels);
             Refresh(SheetNames.Balances);
+            Refresh(SheetNames.Peers);
             Refresh(SheetNames.Connect);
         }
 
@@ -51,10 +52,23 @@ namespace LNDExcel
             _excelAddIn.Wb.Sheets[sheetName].Activate();
             switch (sheetName)
             {
+                case SheetNames.Connect:
+                    bw.DoWork += (o, args) => BwQuery(o, args, LndClient.GetInfo);
+                    bw.RunWorkerCompleted += (o, args) => BwConnectCompleted(o, args, _excelAddIn.ConnectSheet);
+                    break;
+                case SheetNames.Peers:
+                    bw.DoWork += (o, args) => BwQuery(o, args, LndClient.ListPeers);
+                    bw.RunWorkerCompleted += (o, args) =>
+                        BwListCompleted<Peer, ListPeersResponse>(o, args, _excelAddIn.PeersSheet);
+                    break;
+                case SheetNames.Balances:
+                    bw.DoWork += BwBalancesQuery;
+                    bw.RunWorkerCompleted += BwBalancesCompleted;
+                    break;
                 case SheetNames.OpenChannels:
                     bw.DoWork += (o, args) => BwQuery(o, args, LndClient.ListChannels);
                     bw.RunWorkerCompleted += (o, args) =>
-                        BwListCompleted<Channel, ListChannelsResponse>(o, args, _excelAddIn.ChannelsSheet);
+                        BwListCompleted<Channel, ListChannelsResponse>(o, args, _excelAddIn.OpenChannelsSheet);
                     break;
                 case SheetNames.Payments:
                     bw.DoWork += (o, args) => BwQuery(o, args, LndClient.ListPayments);
@@ -63,14 +77,6 @@ namespace LNDExcel
                     break;
                 case SheetNames.NodeLog:
                     Utilities.RemoveLoadingMark(_excelAddIn.Wb.Sheets[sheetName]);
-                    break;
-                case SheetNames.Connect:
-                    bw.DoWork += (o, args) => BwQuery(o, args, LndClient.GetInfo);
-                    bw.RunWorkerCompleted += (o, args) => BwConnectCompleted(o, args, _excelAddIn.ConnectSheet);
-                    break;
-                case SheetNames.Balances:
-                    bw.DoWork += BwBalancesQuery;
-                    bw.RunWorkerCompleted += BwBalancesCompleted;
                     break;
                 default:
                     Utilities.RemoveLoadingMark(_excelAddIn.Wb.Sheets[sheetName]);

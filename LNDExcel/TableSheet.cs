@@ -11,55 +11,67 @@ namespace LNDExcel
     {
         public AsyncLightningApp LApp;
         public Worksheet Ws;
-
-        private int _startRow;
-        private int _headerRow;
+        
+        public int StartRow;
+        public int HeaderRow;
         public int StartColumn;
         public int EndColumn;
-        public IList<FieldDescriptor> _fields;
+        public int EndRow;
 
+        public IList<FieldDescriptor> Fields;
         public Dictionary<object, TMessageClass> Data;
         public RepeatedField<TMessageClass> DataList;
-        private readonly MessageDescriptor _messageDescriptor;
+        public Range Title;
+
+        private readonly List<string> _wideColumns;
         private readonly IFieldAccessor _uniqueKeyField;
         private readonly string _uniqueKeyName;
 
-        private readonly List<string> _wideColumns;
-
         public TableSheet(Worksheet ws, AsyncLightningApp lApp, MessageDescriptor messageDescriptor, string uniqueKeyName,
-            List<string> wideColumns = null)
+            List<string> wideColumns = null, bool nestedData = false)
         {
             Ws = ws;
             LApp = lApp;
             Data = new Dictionary<object, TMessageClass>();
-            _messageDescriptor = messageDescriptor;
+            Fields = messageDescriptor.Fields.InDeclarationOrder()
+                .Where(f => f.FieldType != FieldType.Message || !nestedData).ToList();
+            
+            var nestedFields = messageDescriptor.Fields.InDeclarationOrder()
+                .Where(f => f.FieldType == FieldType.Message && nestedData).ToList();
+            foreach (var field in nestedFields)
+            {
+                Fields = Fields.Concat(field.MessageType.Fields.InDeclarationOrder()).ToArray();
+            }
+
             _uniqueKeyName = uniqueKeyName;
-            _fields = messageDescriptor.Fields.InDeclarationOrder();
-            _uniqueKeyField = _fields.First(m => m.Name == _uniqueKeyName).Accessor;
+            _uniqueKeyField = Fields.First(m => m.Name == _uniqueKeyName).Accessor;
             _wideColumns = wideColumns;
         }
 
         public void SetupTable(string tableName, int rowCount, int startRow = 2, int startColumn = 2)
         {
-            _startRow = startRow;
-            _headerRow = _startRow + 1;
+            StartRow = startRow;
+            HeaderRow = startRow + 1;
             StartColumn = startColumn;
-            EndColumn = StartColumn + _messageDescriptor.Fields.InFieldNumberOrder().Count - 1;
+            EndColumn = StartColumn + Fields.Count - 1;
+            EndRow = HeaderRow + rowCount;
 
 
-            var title = Ws.Cells[_startRow, StartColumn];
-            title.Font.Italic = true;
-            title.Value2 = tableName;
+            Title = Ws.Cells[StartRow, StartColumn];
+            Title.Value2 = tableName;
 
-            var header = Ws.Range[Ws.Cells[_headerRow, StartColumn], Ws.Cells[_headerRow, EndColumn]];
+            var header = Ws.Range[Ws.Cells[HeaderRow, StartColumn], Ws.Cells[HeaderRow, EndColumn]];
             Formatting.TableHeaderRow(header);
-            
+
+            var data = Ws.Range[Ws.Cells[HeaderRow + 1, StartColumn], Ws.Cells[EndRow, EndColumn]];
+            Formatting.TableDataColumn(data, false);
+
             Ws.Columns.AutoFit();
-            for (var fieldIndex = 0; fieldIndex < _fields.Count; fieldIndex++)
+            for (var fieldIndex = 0; fieldIndex < Fields.Count; fieldIndex++)
             {
                 var columnNumber = StartColumn + fieldIndex;
-                var headerCell = Ws.Cells[_headerRow, columnNumber];
-                var field = _fields[fieldIndex];
+                var headerCell = Ws.Cells[HeaderRow, columnNumber];
+                var field = Fields[fieldIndex];
                 var fieldName = Utilities.FormatFieldName(field.Name);
                 headerCell.Value2 = fieldName;
 
@@ -75,12 +87,12 @@ namespace LNDExcel
 
             for (var rowI = 1; rowI <= rowCount; rowI++)
             {
-                var rowNumber = rowI + _headerRow;
+                var rowNumber = rowI + HeaderRow;
                 var rowRange = Ws.Range[Ws.Cells[rowNumber, StartColumn], Ws.Cells[rowNumber, EndColumn]];
                 Formatting.TableDataRow(rowRange, rowNumber % 2 == 0);
             }
 
-
+            Formatting.TableTitle(Title);
         }
 
         public void Update(RepeatedField<TMessageClass> data)
@@ -117,14 +129,17 @@ namespace LNDExcel
             }
 
             Ws.Columns.AutoFit();
-            for (var fieldIndex = 0; fieldIndex < _fields.Count; fieldIndex++)
+            for (var fieldIndex = 0; fieldIndex < Fields.Count; fieldIndex++)
             {
-                var field = _fields[fieldIndex];
+                var field = Fields[fieldIndex];
                 var columnNumber = StartColumn + fieldIndex;
                 var isWide = _wideColumns != null && _wideColumns.Any(field.Name.Contains);
                 if (!isWide) continue;
                 Formatting.WideTableColumn(Ws.Range[Ws.Cells[1, columnNumber], Ws.Cells[1, columnNumber]]);
             }
+
+            Formatting.TableTitle(Title);
+            EndRow = GetLastRow();
         }
 
         private void RemoveRow(object uniqueKey)
@@ -139,10 +154,9 @@ namespace LNDExcel
         {
             var lastRow = GetLastRow();
             Formatting.TableDataRow(Ws.Range[Ws.Cells[lastRow, StartColumn], Ws.Cells[lastRow, EndColumn]], lastRow % 2 == 0);
-            var fields = _messageDescriptor.Fields.InDeclarationOrder();
-            for (var fieldIndex = 0; fieldIndex < fields.Count; fieldIndex++)
+            for (var fieldIndex = 0; fieldIndex < Fields.Count; fieldIndex++)
             {
-                var field = fields[fieldIndex];
+                var field = Fields[fieldIndex];
                 var columnNumber = StartColumn + fieldIndex;
                 var dataCell = Ws.Cells[lastRow, columnNumber];
                 var newValue = field.Accessor.GetValue(newMessage).ToString();
@@ -161,10 +175,9 @@ namespace LNDExcel
                 return;
             }
 
-            var fields = _messageDescriptor.Fields.InDeclarationOrder();
-            for (var fieldIndex = 0; fieldIndex < fields.Count; fieldIndex++)
+            for (var fieldIndex = 0; fieldIndex < Fields.Count; fieldIndex++)
             {
-                var field = fields[fieldIndex];
+                var field = Fields[fieldIndex];
                 var newValue = field.Accessor.GetValue(newMessage).ToString();
                 var oldValue = field.Accessor.GetValue(oldMessage).ToString();
                 if (oldValue == newValue) continue;
@@ -207,15 +220,15 @@ namespace LNDExcel
         {
             var uniqueKeyString = uniqueKey.ToString();
             var idColumn = 1;
-            Range idColumnNameCell = Ws.Cells[_headerRow, idColumn];
+            Range idColumnNameCell = Ws.Cells[HeaderRow, idColumn];
             var uniqueKeyName = Utilities.FormatFieldName(_uniqueKeyName);
             while (idColumnNameCell.Value2 == null || idColumnNameCell.Value2.ToString() != uniqueKeyName)
             {
                 idColumn++;
-                idColumnNameCell = Ws.Cells[_headerRow, idColumn];
+                idColumnNameCell = Ws.Cells[HeaderRow, idColumn];
             }
 
-            var rowNumber = _headerRow;
+            var rowNumber = HeaderRow;
             var uniqueKeyCellString = UniqueKeyCellString(Ws.Cells[rowNumber, idColumn]);
             while (uniqueKeyCellString != uniqueKeyString)
             {
@@ -238,7 +251,7 @@ namespace LNDExcel
 
         private int GetLastRow()
         {
-            var lastRow = _headerRow + 1;
+            var lastRow = HeaderRow + 1;
             Range dataCell = Ws.Cells[lastRow, StartColumn];
             while (dataCell.Value2 != null && !string.IsNullOrWhiteSpace(dataCell.Value2.ToString()))
             {
@@ -250,7 +263,7 @@ namespace LNDExcel
 
         public void Clear()
         {
-            var data = Ws.Range[Ws.Cells[_headerRow + 1, StartColumn], Ws.Cells[GetLastRow(), EndColumn]];
+            var data = Ws.Range[Ws.Cells[HeaderRow + 1, StartColumn], Ws.Cells[GetLastRow(), EndColumn]];
             data.ClearContents();
             Data = new Dictionary<object, TMessageClass>();
         }

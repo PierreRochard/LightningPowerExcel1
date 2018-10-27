@@ -134,5 +134,11 @@ namespace LNDExcel
             cell.Font.Bold = true;
         }
 
+        public static void TableTitle(Range cell)
+        {
+            cell.Font.Italic = true;
+            cell.WrapText = false;
+            cell.ColumnWidth = 20;
+        }
     }
 }
