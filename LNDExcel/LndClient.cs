@@ -270,6 +270,21 @@ namespace LNDExcel
             return stream.Current;
         }
 
+        public ClosedChannelsResponse ListClosedChannels()
+        {
+            var request = new ClosedChannelsRequest
+            {
+                Abandoned = true,
+                Breach = true,
+                Cooperative = true,
+                FundingCanceled = true,
+                LocalForce = true,
+                RemoteForce = true
+            };
+            var response = GetLightningClient().ClosedChannels(request);
+            return response;
+        }
+
         public ListPaymentsResponse ListPayments()
         {
             var request = new ListPaymentsRequest();
