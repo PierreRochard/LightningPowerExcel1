@@ -17,7 +17,7 @@ namespace LNDExcel
         private int _dataStartRow;
         private int _startColumn;
         public int EndColumn;
-        private int _endRow;
+        public int EndRow;
         private readonly IList<FieldDescriptor> _fields;
         private readonly IReadOnlyCollection<string> _excludeList;
 
@@ -39,24 +39,24 @@ namespace LNDExcel
 
             if (_excludeList == null)
             {
-                _endRow = startRow + _fields.Count;
+                EndRow = startRow + _fields.Count;
             }
             else
             {
-                _endRow = startRow + _fields.Count(f => !_excludeList.Any(f.Name.Contains));
+                EndRow = startRow + _fields.Count(f => !_excludeList.Any(f.Name.Contains));
             }
 
             var title = Ws.Cells[_startRow, _startColumn];
             title.Font.Italic = true;
             title.Value2 = tableName;
 
-            var table = Ws.Range[Ws.Cells[_dataStartRow, _startColumn], Ws.Cells[_endRow, EndColumn]];
+            var table = Ws.Range[Ws.Cells[_dataStartRow, _startColumn], Ws.Cells[EndRow, EndColumn]];
             Formatting.VerticalTable(table);
 
-            var header = Ws.Range[Ws.Cells[_dataStartRow, _startColumn], Ws.Cells[_endRow, _startColumn]];
+            var header = Ws.Range[Ws.Cells[_dataStartRow, _startColumn], Ws.Cells[EndRow, _startColumn]];
             Formatting.VerticalTableHeaderColumn(header);
 
-            var data = Ws.Range[Ws.Cells[_dataStartRow, EndColumn], Ws.Cells[_endRow, EndColumn]];
+            var data = Ws.Range[Ws.Cells[_dataStartRow, EndColumn], Ws.Cells[EndRow, EndColumn]];
             Formatting.VerticalTableDataColumn(data);
 
             var rowIndex = 0;
@@ -75,11 +75,13 @@ namespace LNDExcel
 
                 rowIndex++;
             }
+
+            Ws.Columns.AutoFit();
         }
 
         public void Clear()
         {
-            var data = Ws.Range[Ws.Cells[_dataStartRow, EndColumn], Ws.Cells[_endRow, EndColumn]];
+            var data = Ws.Range[Ws.Cells[_dataStartRow, EndColumn], Ws.Cells[EndRow, EndColumn]];
             data.ClearContents();
             Data = default(TMessageClass);
         }
@@ -100,9 +102,6 @@ namespace LNDExcel
             {
                 Update(newMessage, Data);
             }
-
-            Ws.Range["A:AA"].Columns.AutoFit();
-            Ws.Range["A:AA"].Rows.AutoFit();
         }
 
         public void Populate(TMessageClass newMessage)

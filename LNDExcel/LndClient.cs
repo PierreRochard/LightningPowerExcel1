@@ -1,7 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
-using System.Security;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,7 +7,6 @@ using Google.Protobuf;
 using Google.Protobuf.Collections;
 using Grpc.Core;
 using Lnrpc;
-using Microsoft.Office.Interop.Excel;
 using Channel = Grpc.Core.Channel;
 
 namespace LNDExcel
@@ -188,7 +185,7 @@ namespace LNDExcel
             var request = new SendRequest
             {
                 Amt = paymentRequest.NumSatoshis,
-                DestString = paymentRequest.Description
+                DestString = paymentRequest.Destination
             };
             duplexPaymentStreaming.RequestStream.WriteAsync(request);
             return duplexPaymentStreaming.ResponseStream;
@@ -202,7 +199,7 @@ namespace LNDExcel
             {
                 PaymentHashString = paymentRequest.PaymentHash
             };
-            request.Routes.Add(routes);
+            if (routes != null) request.Routes.Add(routes);
             duplexPaymentStreaming.RequestStream.WriteAsync(request);
 
             return duplexPaymentStreaming.ResponseStream;
@@ -258,19 +255,34 @@ namespace LNDExcel
             return response;
         }
 
-        public QueryRoutesResponse QueryRoutes(string pubkey, long amount, long maxFixedFee = 0, long maxPercentFee = 0, int finalCltvDelta = 0, int maxRoutes = 10)
+        public QueryRoutesResponse QueryRoutes(string pubkey, long amount, long maxFixedFee = 0, long maxPercentFee = 0, int finalCltvDelta = 144, int maxRoutes = 10)
         {
             var request = new QueryRoutesRequest
             {
                 Amt = amount,
                 FeeLimit =
-                    maxFixedFee > 0 ? new FeeLimit {Fixed = maxFixedFee} : new FeeLimit {Percent = maxPercentFee},
+                    maxFixedFee > 0 ? new FeeLimit {Fixed = maxFixedFee} : maxPercentFee > 0 ? new FeeLimit {Percent = maxPercentFee} : null,
                 FinalCltvDelta = finalCltvDelta,
                 NumRoutes = maxRoutes,
                 PubKey = pubkey
             };
             var response = GetLightningClient().QueryRoutes(request);
             return response;
+        }
+
+        public CloseStatusUpdate CloseChannel(string channelPoint, bool force)
+        {
+            var request = new CloseChannelRequest
+            {
+                ChannelPoint = new ChannelPoint
+                {
+                    FundingTxidBytes = ByteString.CopyFromUtf8(channelPoint.Split(':')[0]),
+                    OutputIndex =  uint.Parse(channelPoint.Split(':')[1])
+                }
+            };
+            var stream = GetLightningClient().CloseChannel(request).ResponseStream;
+            stream.MoveNext(CancellationToken.None);
+            return stream.Current;
         }
     }
 }

@@ -17,7 +17,7 @@ namespace LNDExcel
         public VerticalTableSheet<PayReq> PaymentRequestTable;
         public VerticalTableSheet<Route> RouteTakenTable;
         public TableSheet<Hop> HopTable;
-        public TableSheet<Route> ProposedRoutesTable;
+        public TableSheet<Route> PotentialRoutesTable;
 
         private Range _payReqLabelCell;
         private Range _payReqInputCell;
@@ -35,9 +35,9 @@ namespace LNDExcel
         private int _startRow = 2;
 
         private int _payReqDataStartRow = 4;
-        private int _sendPaymentButtonRow = 21;
-        private int _clearPaymentInfoButtonRow = 23;
-        private int _paymentResponseDataStartRow = 25;
+        private int _sendPaymentButtonRow = 23;
+        private int _clearPaymentInfoButtonRow = 25;
+        private int _paymentResponseDataStartRow = 27;
 
         private int _payReqColumnWidth = 70;
 
@@ -67,8 +67,8 @@ namespace LNDExcel
             PaymentRequestTable = new VerticalTableSheet<PayReq>(Ws, LApp, PayReq.Descriptor);
             PaymentRequestTable.SetupVerticalTable("Decoded Payment Request", _payReqDataStartRow);
 
-            ProposedRoutesTable = new TableSheet<Route>(Ws, LApp, Route.Descriptor, "Hops");
-            ProposedRoutesTable.SetupTable("Proposed Routes", 3, _startRow=PaymentRequestTable.EndColumn + 2);
+            PotentialRoutesTable = new TableSheet<Route>(Ws, LApp, Route.Descriptor, "hops");
+            PotentialRoutesTable.SetupTable("Potential Routes", 3, _startRow=PaymentRequestTable.EndRow + 2);
 
             _errorData = Ws.Cells[_sendPaymentButtonRow + 1, _startColumn + 1];
 
@@ -103,7 +103,7 @@ namespace LNDExcel
         {
             ClearPayReq();
             PaymentRequestTable.Clear();
-            ProposedRoutesTable.Clear();
+            PotentialRoutesTable.Clear();
             ClearSendStatus();
             ClearErrorData();
             ClearSendPaymentResponseData();
@@ -167,8 +167,8 @@ namespace LNDExcel
 
             try
             {
-                var r = LApp.QueryRoutes(response);
-                ProposedRoutesTable.Update(r.Routes);
+               var r = LApp.QueryRoutes(response);
+               PotentialRoutesTable.Update(r.Routes);
             }
             catch (RpcException e)
             {
@@ -192,7 +192,14 @@ namespace LNDExcel
 
             try
             {
-                LApp.SendPayment(PaymentRequestTable.Data, ProposedRoutesTable.DataList);
+                if (PotentialRoutesTable.DataList == null || PotentialRoutesTable.DataList.Count == 0)
+                {
+                    LApp.SendPayment(PaymentRequestTable.Data);
+                }
+                else
+                {
+                    LApp.SendPayment(PaymentRequestTable.Data, PotentialRoutesTable.DataList);
+                }
             }
             catch (RpcException rpcException)
             {

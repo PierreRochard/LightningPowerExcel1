@@ -41,19 +41,37 @@ namespace LNDExcel
 
         public static void TableDataRow(Range cells, bool isEven)
         {
-            cells.HorizontalAlignment = XlHAlign.xlHAlignCenter;
-            cells.VerticalAlignment = XlVAlign.xlVAlignCenter;
-
-            cells.Borders[XlBordersIndex.xlEdgeBottom].LineStyle = XlLineStyle.xlContinuous;
-            cells.Borders[XlBordersIndex.xlEdgeBottom].Weight = XlBorderWeight.xlThin;
-
-            cells.Borders[XlBordersIndex.xlInsideHorizontal].LineStyle = XlLineStyle.xlContinuous;
-            cells.Borders[XlBordersIndex.xlInsideHorizontal].Weight = XlBorderWeight.xlThin;
-
-            VerticalBorders(cells);
-
             cells.Interior.Color = isEven ? Color.LightYellow : Color.White;
             cells.NumberFormat = "0";
+        }
+
+        public static void WideTableColumn(Range range)
+        {
+            range.WrapText = true;
+            range.ColumnWidth = 20;
+        }
+        public static void TableDataColumn(Range range, bool isWide)
+        {
+            if (!isWide)
+            {
+                range.HorizontalAlignment = XlHAlign.xlHAlignCenter;
+                range.VerticalAlignment = XlVAlign.xlVAlignCenter;
+            }
+            else
+            {
+                range.VerticalAlignment = XlVAlign.xlVAlignTop;
+                range.HorizontalAlignment = XlHAlign.xlHAlignLeft;
+            }
+
+            range.Rows.RowHeight = 14.3;
+
+            range.Borders[XlBordersIndex.xlEdgeBottom].LineStyle = XlLineStyle.xlContinuous;
+            range.Borders[XlBordersIndex.xlEdgeBottom].Weight = XlBorderWeight.xlThin;
+
+            range.Borders[XlBordersIndex.xlInsideHorizontal].LineStyle = XlLineStyle.xlContinuous;
+            range.Borders[XlBordersIndex.xlInsideHorizontal].Weight = XlBorderWeight.xlThin;
+
+            VerticalBorders(range);
         }
 
         public static void VerticalBorders(Range cells)
@@ -115,5 +133,6 @@ namespace LNDExcel
             cell.Interior.Color = Color.White;
             cell.Font.Bold = true;
         }
+
     }
 }

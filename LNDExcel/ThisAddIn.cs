@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using Grpc.Core;
@@ -65,11 +66,13 @@ namespace LNDExcel
             BalancesSheet = new BalancesSheet(Wb.Sheets[SheetNames.Balances], LApp);
 
             CreateSheet(SheetNames.OpenChannels);
-            ChannelsSheet = new TableSheet<Channel>(Wb.Sheets[SheetNames.OpenChannels], LApp, Channel.Descriptor, "chan_id");
+            var wideColumnsChans = new List<string> {"remote_pubkey", "channel_point", "pending_htlcs"};
+            ChannelsSheet = new TableSheet<Channel>(Wb.Sheets[SheetNames.OpenChannels], LApp, Channel.Descriptor, "chan_id", wideColumnsChans);
             ChannelsSheet.SetupTable("Open Channels", 3);
 
             CreateSheet(SheetNames.Payments);
-            PaymentsSheet = new TableSheet<Payment>(Wb.Sheets[SheetNames.Payments], LApp, Payment.Descriptor, "payment_hash");
+            var wideColumnsPay = new List<string> { "payment_hash", "path", "payment_preimage"};
+            PaymentsSheet = new TableSheet<Payment>(Wb.Sheets[SheetNames.Payments], LApp, Payment.Descriptor, "payment_hash", wideColumnsPay);
             PaymentsSheet.SetupTable("Payments", 3);
 
             CreateSheet(SheetNames.SendPayment);

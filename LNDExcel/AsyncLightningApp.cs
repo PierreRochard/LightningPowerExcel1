@@ -189,7 +189,7 @@ namespace LNDExcel
         // ReSharper disable once UnusedParameter.Local
         private async Task<SendResponse> SendPaymentAsync(object sender, PayReq paymentRequest, int timeout, RepeatedField<Route> routes = null)
         {
-            var stream = routes != null ? LndClient.SendToRoute(paymentRequest, routes, timeout) : LndClient.SendPayment(paymentRequest, timeout);
+            var stream = routes != null && routes.Count != 0 ? LndClient.SendToRoute(paymentRequest, routes, timeout) : LndClient.SendPayment(paymentRequest, timeout);
             await stream.MoveNext(CancellationToken.None);
             return stream.Current;
         }
