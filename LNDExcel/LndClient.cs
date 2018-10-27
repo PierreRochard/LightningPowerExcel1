@@ -214,6 +214,33 @@ namespace LNDExcel
             return response;
         }
 
+        public IAsyncStreamReader<OpenStatusUpdate> OpenChannel(string nodePubkey, long localFundingAmount, long pushSat = 0, bool isPrivate = true, 
+            long minHtlcMsat = 16000, int minConfs = 1, uint remoteCsvDelay=0, long satPerByte = 0, int targetConf = 0)
+        {
+            var request = new OpenChannelRequest
+            {
+                LocalFundingAmount = localFundingAmount,
+                MinConfs = minConfs,
+                MinHtlcMsat = minHtlcMsat,
+                NodePubkey = ByteString.CopyFromUtf8(nodePubkey),
+                NodePubkeyString = nodePubkey,
+                Private = isPrivate,
+                PushSat = pushSat
+            };
+            if (remoteCsvDelay > 0) request.RemoteCsvDelay = remoteCsvDelay;
+            if (satPerByte > 0) request.SatPerByte = satPerByte;
+            if (targetConf > 0) request.TargetConf = targetConf;
+            var response = GetLightningClient().OpenChannel(request);
+            return response.ResponseStream;
+        }
+
+        public PendingChannelsResponse ListPendingChannels()
+        {
+            var request = new PendingChannelsRequest();
+            var response = GetLightningClient().PendingChannels(request);
+            return response;
+        }
+
         public ListChannelsResponse ListChannels()
         {
             var request = new ListChannelsRequest();
