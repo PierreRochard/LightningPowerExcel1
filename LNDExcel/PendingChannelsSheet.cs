@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Lnrpc;
 using Microsoft.Office.Interop.Excel;
 using static Lnrpc.PendingChannelsResponse.Types;
 
@@ -25,20 +26,16 @@ namespace LNDExcel
             Ws = ws;
             LApp = lApp;
 
-            var pendingOpenWideColumns = new List<string> {"remote_node_pub"};
-            PendingOpenChannelsSheet = new TableSheet<PendingOpenChannel>(Ws, LApp, PendingOpenChannel.Descriptor, "channel_point", pendingOpenWideColumns, true);
+            PendingOpenChannelsSheet = new TableSheet<PendingOpenChannel>(Ws, LApp, PendingOpenChannel.Descriptor, "channel_point", true);
             PendingOpenChannelsSheet.SetupTable("Channels pending open", 5, StartRow);
 
-            var pendingClosingWideColumns = new List<string> {"remote_pub_key", "closing_txid"};
-            PendingClosingChannelsSheet = new TableSheet<ClosedChannel>(Ws, LApp, ClosedChannel.Descriptor, "channel_point", pendingClosingWideColumns, true);
+            PendingClosingChannelsSheet = new TableSheet<ClosedChannel>(Ws, LApp, ClosedChannel.Descriptor, "channel_point", true);
             PendingClosingChannelsSheet.SetupTable("Channels pending closing", 5, PendingOpenChannelsSheet.EndRow+2, StartColumn);
 
-            var pendingForceClosingWideColumns = new List<string> { "remote_pub_key", "closing_txid"};
-            PendingForceClosingChannelsSheet = new TableSheet<ForceClosedChannel>(Ws, LApp, ForceClosedChannel.Descriptor, "channel_point", pendingForceClosingWideColumns, true);
+            PendingForceClosingChannelsSheet = new TableSheet<ForceClosedChannel>(Ws, LApp, ForceClosedChannel.Descriptor, "channel_point", true);
             PendingForceClosingChannelsSheet.SetupTable("Channels pending force closing", 5, PendingClosingChannelsSheet.EndRow+2, StartColumn);
 
-            var waitingCloseWideColumns = new List<string> { "remote_pub_key" };
-            WaitingCloseChannelsSheet = new TableSheet<WaitingCloseChannel>(Ws, LApp, WaitingCloseChannel.Descriptor, "channel_point", waitingCloseWideColumns, true);
+            WaitingCloseChannelsSheet = new TableSheet<WaitingCloseChannel>(Ws, LApp, WaitingCloseChannel.Descriptor, "channel_point", true);
             WaitingCloseChannelsSheet.SetupTable("Channels waiting for closing transaction to confirm", 5, PendingForceClosingChannelsSheet.EndRow + 2, StartColumn);
 
             EndRow = WaitingCloseChannelsSheet.EndRow;
@@ -49,6 +46,14 @@ namespace LNDExcel
                 PendingForceClosingChannelsSheet.EndColumn,
                 WaitingCloseChannelsSheet.EndColumn
             }.Max();
+        }
+
+        public void Update(PendingChannelsResponse result)
+        {
+            PendingOpenChannelsSheet.Update(result.PendingOpenChannels);
+            PendingClosingChannelsSheet.Update(result.PendingClosingChannels);
+            PendingForceClosingChannelsSheet.Update(result.PendingForceClosingChannels);
+            WaitingCloseChannelsSheet.Update(result.WaitingCloseChannels);
         }
     }
 }

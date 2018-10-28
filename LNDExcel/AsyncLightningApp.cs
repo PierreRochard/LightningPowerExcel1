@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading;
@@ -32,6 +33,8 @@ namespace LNDExcel
             }
             LndClient.TryUnlockWallet(LndClient.Config.Password);
             Refresh(SheetNames.Payments);
+            Refresh(SheetNames.ClosedChannels);
+            Refresh(SheetNames.PendingChannels);
             Refresh(SheetNames.OpenChannels);
             Refresh(SheetNames.Balances);
             Refresh(SheetNames.Peers);
@@ -70,6 +73,15 @@ namespace LNDExcel
                     bw.RunWorkerCompleted += (o, args) =>
                         BwListCompleted<Channel, ListChannelsResponse>(o, args, _excelAddIn.OpenChannelsSheet);
                     break;
+                case SheetNames.PendingChannels:
+                    bw.DoWork += (o, args) => BwQuery(o, args, LndClient.ListPendingChannels);
+                    bw.RunWorkerCompleted += BwPendingChannelsCompleted;
+                    break;
+                case SheetNames.ClosedChannels:
+                    bw.DoWork += (o, args) => BwQuery(o, args, LndClient.ListClosedChannels);
+                    bw.RunWorkerCompleted += (o, args) =>
+                        BwListCompleted<ChannelCloseSummary, ClosedChannelsResponse>(o, args, _excelAddIn.ClosedChannelsSheet);
+                    break;
                 case SheetNames.Payments:
                     bw.DoWork += (o, args) => BwQuery(o, args, LndClient.ListPayments);
                     bw.RunWorkerCompleted += (o, args) =>
@@ -84,6 +96,13 @@ namespace LNDExcel
             }
 
             bw.RunWorkerAsync();
+        }
+
+        private void BwPendingChannelsCompleted(object sender, RunWorkerCompletedEventArgs e)
+        {
+            var result = (PendingChannelsResponse) e.Result;
+            _excelAddIn.PendingChannelsSheet.Update(result);
+            Utilities.RemoveLoadingMark(_excelAddIn.Wb.Sheets[SheetNames.PendingChannels]);
         }
 
         private void BwBalancesCompleted(object sender, RunWorkerCompletedEventArgs e)
@@ -149,7 +168,7 @@ namespace LNDExcel
 
         }
 
-        public void SendPayment(PayReq paymentRequest, RepeatedField<Route> routes = null)
+        public void SendPayment(PayReq paymentRequest, List<Route> routes = null)
         {
             var bw = new BackgroundWorker {WorkerReportsProgress = true};
             if (SynchronizationContext.Current == null)
@@ -170,7 +189,7 @@ namespace LNDExcel
             _excelAddIn.SendPaymentSheet.UpdateSendPaymentProgress(e.ProgressPercentage);
         }
 
-        private void BwSendPayment(object sender, DoWorkEventArgs e, PayReq paymentRequest, int timeout, RepeatedField<Route> routes = null)
+        private void BwSendPayment(object sender, DoWorkEventArgs e, PayReq paymentRequest, int timeout, List<Route> routes = null)
         {
             if (sender != null)
             {
@@ -178,7 +197,7 @@ namespace LNDExcel
             }
         }
 
-        private async Task<SendResponse> ProgressSend(object sender, PayReq paymentRequest, int timeout, RepeatedField<Route> routes = null)
+        private async Task<SendResponse> ProgressSend(object sender, PayReq paymentRequest, int timeout, List<Route> routes = null)
         {
             var sendTask = SendPaymentAsync(sender, paymentRequest, timeout, routes);
             var i = 0;
@@ -193,7 +212,7 @@ namespace LNDExcel
         }
 
         // ReSharper disable once UnusedParameter.Local
-        private async Task<SendResponse> SendPaymentAsync(object sender, PayReq paymentRequest, int timeout, RepeatedField<Route> routes = null)
+        private async Task<SendResponse> SendPaymentAsync(object sender, PayReq paymentRequest, int timeout, List<Route> routes = null)
         {
             var stream = routes != null && routes.Count != 0 ? LndClient.SendToRoute(paymentRequest, routes, timeout) : LndClient.SendPayment(paymentRequest, timeout);
             await stream.MoveNext(CancellationToken.None);
@@ -225,9 +244,9 @@ namespace LNDExcel
             return LndClient.StopDaemon();
         }
 
-        public QueryRoutesResponse QueryRoutes(PayReq payReq)
+        public QueryRoutesResponse QueryRoutes(PayReq payReq, int maxRoutes)
         {
-            return LndClient.QueryRoutes(payReq.Destination, payReq.NumSatoshis, maxRoutes: 3);
+            return LndClient.QueryRoutes(payReq.Destination, payReq.NumSatoshis, maxRoutes: maxRoutes);
         }
     }
 }

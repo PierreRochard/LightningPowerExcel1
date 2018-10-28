@@ -18,6 +18,8 @@ namespace LNDExcel
         public TableSheet<Hop> HopTable;
         public TableSheet<Route> PotentialRoutesTable;
 
+        private const int MaxRoutes = 10;
+
         private Range _payReqLabelCell;
         private Range _payReqInputCell;
         private Range _payReqInputRange;
@@ -30,15 +32,10 @@ namespace LNDExcel
         private Range _paymentPreimageCell;
         private Range _paymentPreimageLabel;
 
-        private int _startColumn = 2;
-        private int _startRow = 2;
+        public int StartColumn = 2;
+        public int StartRow = 2;
 
-        private int _payReqDataStartRow = 4;
-        private int _sendPaymentButtonRow = 23;
-        private int _clearPaymentInfoButtonRow = 25;
-        private int _paymentResponseDataStartRow = 27;
-
-        private int _payReqColumnWidth = 70;
+        private const int PayReqColumnWidth = 70;
 
         public SendPaymentSheet(Worksheet ws, AsyncLightningApp lApp)
         {
@@ -48,14 +45,14 @@ namespace LNDExcel
         
         public void InitializePaymentRequest()
         {
-            _payReqLabelCell = Ws.Cells[_startRow, _startColumn];
+            _payReqLabelCell = Ws.Cells[StartRow, StartColumn];
             _payReqLabelCell.Value2 = "Payment request:";
             _payReqLabelCell.Font.Bold = true;
             _payReqLabelCell.Columns.AutoFit();
 
-            _payReqInputCell = Ws.Cells[_startRow, _startColumn + 1];
+            _payReqInputCell = Ws.Cells[StartRow, StartColumn + 1];
 
-            _payReqInputRange = Ws.Range[_payReqInputCell, "U2"];
+            _payReqInputRange = Ws.Range[_payReqInputCell, Ws.Cells[StartRow, StartColumn + 15]];
             _payReqInputRange.Interior.Color = Color.AliceBlue;
 
             _payReqRange = Ws.Range[_payReqLabelCell, _payReqInputRange];
@@ -64,36 +61,37 @@ namespace LNDExcel
             Ws.Change += WsOnChangeParsePayReq;
 
             PaymentRequestTable = new VerticalTableSheet<PayReq>(Ws, LApp, PayReq.Descriptor);
-            PaymentRequestTable.SetupVerticalTable("Decoded Payment Request", _payReqDataStartRow);
+            PaymentRequestTable.SetupVerticalTable("Decoded Payment Request", StartRow + 2);
 
             PotentialRoutesTable = new TableSheet<Route>(Ws, LApp, Route.Descriptor, "hops");
-            PotentialRoutesTable.SetupTable("Potential Routes", 3, _startRow=PaymentRequestTable.EndRow + 2);
-
-            _errorData = Ws.Cells[_sendPaymentButtonRow + 1, _startColumn + 1];
-
-            Button sendPaymentButton = Utilities.CreateButton("sendPayment", Ws, Ws.Cells[_sendPaymentButtonRow, _startColumn], "Send Payment");
-            sendPaymentButton.Click += SendPaymentButtonOnClick;
+            PotentialRoutesTable.SetupTable("Potential Routes", MaxRoutes, StartRow=PaymentRequestTable.EndRow + 2);
             
-            Button clearPaymentInfoButton = Utilities.CreateButton("clearPaymentInfo", Ws, Ws.Cells[_clearPaymentInfoButtonRow, _startColumn], "Clear");
-            clearPaymentInfoButton.Click += ClearPaymentInfoButtonOnClick;
+            var sendPaymentButtonRow = PotentialRoutesTable.EndRow + 4;
+            Button sendPaymentButton = Utilities.CreateButton("sendPayment", Ws, Ws.Cells[sendPaymentButtonRow, StartColumn], "Send Payment");
+            sendPaymentButton.Click += SendPaymentButtonOnClick;
+            _errorData = Ws.Cells[sendPaymentButtonRow + 3, StartColumn + 1];
 
-            _sendStatusRange = Ws.Cells[_sendPaymentButtonRow + 1, _startColumn];
+            _sendStatusRange = Ws.Cells[sendPaymentButtonRow + 3, StartColumn];
             _sendStatusRange.Font.Italic = true;
 
-            _paymentPreimageLabel = Ws.Cells[_paymentResponseDataStartRow, _startColumn + 1];
+            Button clearPaymentInfoButton = Utilities.CreateButton("clearPaymentInfo", Ws, Ws.Cells[sendPaymentButtonRow + 6, StartColumn], "Clear");
+            clearPaymentInfoButton.Click += ClearPaymentInfoButtonOnClick;
+            
+            var paymentResponseDataStartRow = sendPaymentButtonRow + 9;
+            _paymentPreimageLabel = Ws.Cells[paymentResponseDataStartRow, StartColumn + 1];
             _paymentPreimageLabel.Value2 = "Proof of Payment";
             _paymentPreimageLabel.Font.Italic = true;
 
-            _paymentPreimageCell = Ws.Cells[_paymentResponseDataStartRow + 1, _startColumn + 1];
+            _paymentPreimageCell = Ws.Cells[paymentResponseDataStartRow, StartColumn + 1];
             _paymentPreimageCell.Interior.Color = Color.PaleGreen;
             
             RouteTakenTable = new VerticalTableSheet<Route>(Ws, LApp, Route.Descriptor, new List<string> { "hops" });
-            RouteTakenTable.SetupVerticalTable("Payment Summary", _paymentResponseDataStartRow + 3);
+            RouteTakenTable.SetupVerticalTable("Payment Summary", paymentResponseDataStartRow + 3);
 
             HopTable = new TableSheet<Hop>(Ws, LApp, Hop.Descriptor, "chan_id");
-            HopTable.SetupTable("Route", 4, _paymentResponseDataStartRow + 12);
+            HopTable.SetupTable("Route", 4, RouteTakenTable.EndRow + 2);
 
-            _payReqInputCell.Columns.ColumnWidth = _payReqColumnWidth;
+            _payReqInputCell.Columns.ColumnWidth = PayReqColumnWidth;
             Utilities.RemoveLoadingMark(Ws);
         }
 
@@ -166,7 +164,7 @@ namespace LNDExcel
 
             try
             {
-               var r = LApp.QueryRoutes(response);
+               var r = LApp.QueryRoutes(response, MaxRoutes);
                PotentialRoutesTable.Update(r.Routes);
             }
             catch (RpcException e)
@@ -175,7 +173,7 @@ namespace LNDExcel
                 return;
             }
 
-            _payReqInputCell.Columns.ColumnWidth = _payReqColumnWidth;
+            _payReqInputCell.Columns.ColumnWidth = PayReqColumnWidth;
         }
 
         private void SendPaymentButtonOnClick(object sender, EventArgs e)
@@ -229,7 +227,7 @@ namespace LNDExcel
 
                 RouteTakenTable.Populate(response.PaymentRoute);
                 HopTable.Update(response.PaymentRoute.Hops);
-                _payReqInputCell.Columns.ColumnWidth = _payReqColumnWidth;
+                _payReqInputCell.Columns.ColumnWidth = PayReqColumnWidth;
             }
             else
             {

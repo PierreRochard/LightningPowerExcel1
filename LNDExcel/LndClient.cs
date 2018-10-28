@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -327,7 +328,7 @@ namespace LNDExcel
             return duplexPaymentStreaming.ResponseStream;
         }
 
-        public IAsyncStreamReader<SendResponse> SendToRoute(PayReq paymentRequest, RepeatedField<Route> routes, int timeout)
+        public IAsyncStreamReader<SendResponse> SendToRoute(PayReq paymentRequest, List<Route> routes, int timeout)
         {
             var deadline = DateTime.UtcNow.AddSeconds(timeout);
             var duplexPaymentStreaming = GetLightningClient().SendToRoute(Metadata.Empty, deadline, CancellationToken.None);

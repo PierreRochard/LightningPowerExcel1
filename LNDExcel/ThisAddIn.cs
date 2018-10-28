@@ -20,6 +20,7 @@ namespace LNDExcel
         public BalancesSheet BalancesSheet;
         public TableSheet<Channel> OpenChannelsSheet;
         public PendingChannelsSheet PendingChannelsSheet;
+        public TableSheet<ChannelCloseSummary> ClosedChannelsSheet;
         public TableSheet<Payment> PaymentsSheet;
         public SendPaymentSheet SendPaymentSheet;
         public NodeSheet NodesSheet;
@@ -65,27 +66,26 @@ namespace LNDExcel
             ConnectSheet.PopulateConfig();
 
             CreateSheet(SheetNames.Peers);
-            var wideColumnsPeers = new List<string> { "pub_key" };
-            PeersSheet = new TableSheet<Peer>(Wb.Sheets[SheetNames.Peers], LApp, Peer.Descriptor, "pub_key", wideColumnsPeers);
+            PeersSheet = new TableSheet<Peer>(Wb.Sheets[SheetNames.Peers], LApp, Peer.Descriptor, "pub_key");
             PeersSheet.SetupTable("Peers", 3);
 
             CreateSheet(SheetNames.Balances);
             BalancesSheet = new BalancesSheet(Wb.Sheets[SheetNames.Balances], LApp);
 
             CreateSheet(SheetNames.OpenChannels);
-            var wideColumnsChannels = new List<string> {"remote_pubkey", "channel_point", "pending_htlcs"};
-            OpenChannelsSheet = new TableSheet<Channel>(Wb.Sheets[SheetNames.OpenChannels], LApp, Channel.Descriptor, "chan_id", wideColumnsChannels);
-            OpenChannelsSheet.SetupTable("Open Channels", 3);
+            OpenChannelsSheet = new TableSheet<Channel>(Wb.Sheets[SheetNames.OpenChannels], LApp, Channel.Descriptor, "chan_id");
+            OpenChannelsSheet.SetupTable("Open Channels");
 
             CreateSheet(SheetNames.PendingChannels);
-            var wideColumnsPendingChannels = new List<string> {""};
             PendingChannelsSheet = new PendingChannelsSheet(Wb.Sheets[SheetNames.PendingChannels], LApp);
 
+            CreateSheet(SheetNames.ClosedChannels);
+            ClosedChannelsSheet = new TableSheet<ChannelCloseSummary>(Wb.Sheets[SheetNames.ClosedChannels], LApp, ChannelCloseSummary.Descriptor, "chan_id");
+            ClosedChannelsSheet.SetupTable("Closed Channels");
 
             CreateSheet(SheetNames.Payments);
-            var wideColumnsPayments = new List<string> { "payment_hash", "path", "payment_preimage"};
-            PaymentsSheet = new TableSheet<Payment>(Wb.Sheets[SheetNames.Payments], LApp, Payment.Descriptor, "payment_hash", wideColumnsPayments);
-            PaymentsSheet.SetupTable("Payments", 3);
+            PaymentsSheet = new TableSheet<Payment>(Wb.Sheets[SheetNames.Payments], LApp, Payment.Descriptor, "payment_hash");
+            PaymentsSheet.SetupTable("Payments");
 
             CreateSheet(SheetNames.SendPayment);
             SendPaymentSheet = new SendPaymentSheet(Wb.Sheets[SheetNames.SendPayment], LApp);

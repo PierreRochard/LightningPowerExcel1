@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Google.Protobuf;
 using Google.Protobuf.Collections;
@@ -19,36 +20,76 @@ namespace LNDExcel
         public int EndRow;
 
         public IList<FieldDescriptor> Fields;
-        public Dictionary<object, TMessageClass> Data;
-        public RepeatedField<TMessageClass> DataList;
+        public Dictionary<object, TMessageClass> DisplayData;
+        public List<TMessageClass> DataList;
+        public List<TMessageClass> DisplayDataList;
         public Range Title;
 
         private readonly List<string> _wideColumns;
         private readonly IFieldAccessor _uniqueKeyField;
         private readonly string _uniqueKeyName;
+        private readonly int _limit;
+        private readonly string _sortColumn;
+        private readonly bool _sortAscending;
+        private readonly IFieldAccessor _uniqueNestedField;
+        private readonly List<Tuple<IFieldAccessor, IFieldAccessor>> _nestedFields;
 
-        public TableSheet(Worksheet ws, AsyncLightningApp lApp, MessageDescriptor messageDescriptor, string uniqueKeyName,
-            List<string> wideColumns = null, bool nestedData = false)
+        public TableSheet(Worksheet ws, AsyncLightningApp lApp, MessageDescriptor messageDescriptor, string uniqueKeyName, 
+            bool nestedData = false, int limit = 0, string sortColumn = null, bool sortAscending = true)
         {
+            _nestedFields = new List<Tuple<IFieldAccessor, IFieldAccessor>>();
+            _uniqueKeyName = uniqueKeyName;
             Ws = ws;
             LApp = lApp;
-            Data = new Dictionary<object, TMessageClass>();
+            DisplayData = new Dictionary<object, TMessageClass>();
             Fields = messageDescriptor.Fields.InDeclarationOrder()
                 .Where(f => f.FieldType != FieldType.Message || !nestedData).ToList();
-            
-            var nestedFields = messageDescriptor.Fields.InDeclarationOrder()
-                .Where(f => f.FieldType == FieldType.Message && nestedData).ToList();
-            foreach (var field in nestedFields)
+
+            var messageFields = messageDescriptor.Fields.InDeclarationOrder()
+                .Where(f => f.FieldType == FieldType.Message && nestedData && !f.IsRepeated && !f.IsMap).ToList();
+            foreach (var parentField in messageFields)
             {
-                Fields = Fields.Concat(field.MessageType.Fields.InDeclarationOrder()).ToArray();
+                var childFields = parentField.MessageType.Fields.InDeclarationOrder();
+                Fields = Fields.Concat(childFields).ToArray();
+                foreach (var childField in childFields)
+                {
+                    var nf = new Tuple<IFieldAccessor, IFieldAccessor>(parentField.Accessor, childField.Accessor);
+                    if (!parentField.IsMap &&!parentField.IsRepeated) _nestedFields.Add(nf);
+                    if (childField.Name != _uniqueKeyName) continue;
+                    _uniqueKeyField = childField.Accessor;
+                    _uniqueNestedField = parentField.Accessor;
+                }
             }
 
-            _uniqueKeyName = uniqueKeyName;
-            _uniqueKeyField = Fields.First(m => m.Name == _uniqueKeyName).Accessor;
-            _wideColumns = wideColumns;
+            if (_uniqueKeyField == null)
+            {
+                foreach (var field in Fields)
+                {
+                    if (field.Name == _uniqueKeyName) _uniqueKeyField = field.Accessor;
+                }
+            }
+
+            _limit = limit;
+            _sortColumn = sortColumn;
+            _sortAscending = sortAscending;
+            _wideColumns = new List<string>
+            {
+                "pub_key",
+                "remote_pubkey",
+                "remote_pub_key",
+                "remote_node_pub",
+                "channel_point",
+                "pending_htlcs",
+                "closing_tx_hash",
+                "closing_txid",
+                "chain_hash",
+                "payment_preimage",
+                "payment_hash",
+                "path"
+            };
         }
 
-        public void SetupTable(string tableName, int rowCount, int startRow = 2, int startColumn = 2)
+        public void SetupTable(string tableName, int rowCount = 3, int startRow = 2, int startColumn = 2)
         {
             StartRow = startRow;
             HeaderRow = startRow + 1;
@@ -95,19 +136,60 @@ namespace LNDExcel
             Formatting.TableTitle(Title);
         }
 
+        private object GetUniqueKey(TMessageClass message)
+        {
+            if (_uniqueNestedField == null)
+            {
+                return _uniqueKeyField.GetValue(message);
+            }
+
+            return _uniqueKeyField.GetValue((IMessage) _uniqueNestedField.GetValue(message));
+        }
+
+        private string GetValue(TMessageClass message, IFieldAccessor targetField)
+        {
+            foreach (var nestedField in _nestedFields)
+            {
+                var parentField = nestedField.Item1;
+                var childField = nestedField.Item2;
+                if (childField.Descriptor.Name == targetField.Descriptor.Name)
+                {
+                    return childField.GetValue((IMessage) parentField.GetValue(message)).ToString();
+                }
+            }
+            return targetField.GetValue(message).ToString();
+        }
+        
         public void Update(RepeatedField<TMessageClass> data)
         {
-            DataList = data;
-            foreach (var newMessage in DataList)
+            DataList = data.ToList();
+            DisplayDataList = DataList;
+            if (_sortColumn != null)
             {
-                var uniqueKey = _uniqueKeyField.GetValue(newMessage);
-                var isCached = Data.TryGetValue(uniqueKey, out var cachedMessage);
+                var prop = typeof(TMessageClass).GetProperty(_sortColumn);
+                if (prop != null)
+                {
+                    DisplayDataList = _sortAscending 
+                        ? DisplayDataList.OrderBy(d => prop.GetValue(d, null)).ToList() 
+                        : DisplayDataList.OrderByDescending(d => prop.GetValue(d, null)).ToList();
+                }
+            }
+
+            if (_limit > 0)
+            {
+                DisplayDataList = DisplayDataList.Take(10).ToList();
+            }
+            
+            foreach (var newMessage in DisplayDataList)
+            {
+                var uniqueKey = GetUniqueKey(newMessage);
+                var isCached = DisplayData.TryGetValue(uniqueKey, out var cachedMessage);
                 if (isCached && cachedMessage.Equals(newMessage))
                 {
                     continue;
                 }
 
-                Data[uniqueKey] = newMessage;
+                DisplayData[uniqueKey] = newMessage;
 
                 if (!isCached)
                 {
@@ -119,9 +201,9 @@ namespace LNDExcel
                 }
             }
 
-            foreach (var cachedUniqueKey in Data.Keys)
+            foreach (var cachedUniqueKey in DisplayData.Keys)
             {
-                var result = DataList.FirstOrDefault(newMessage => _uniqueKeyField.GetValue(newMessage).ToString() == cachedUniqueKey.ToString());
+                var result = DisplayDataList.FirstOrDefault(newMessage => GetUniqueKey(newMessage).ToString() == cachedUniqueKey.ToString());
                 if (result == null)
                 {
                     RemoveRow(cachedUniqueKey);
@@ -159,7 +241,7 @@ namespace LNDExcel
                 var field = Fields[fieldIndex];
                 var columnNumber = StartColumn + fieldIndex;
                 var dataCell = Ws.Cells[lastRow, columnNumber];
-                var newValue = field.Accessor.GetValue(newMessage).ToString();
+                var newValue = GetValue(newMessage, field.Accessor);
                 AssignCellValue(newMessage, field, newValue, dataCell);
                 var isWide = _wideColumns != null && _wideColumns.Any(field.Name.Contains);
                 Formatting.TableDataColumn(Ws.Range[Ws.Cells[lastRow, columnNumber], Ws.Cells[lastRow, columnNumber]], isWide);
@@ -168,7 +250,7 @@ namespace LNDExcel
 
         public void UpdateRow(TMessageClass newMessage, TMessageClass oldMessage)
         {
-            var row = GetRow(_uniqueKeyField.GetValue(newMessage));
+            var row = GetRow(GetUniqueKey(newMessage));
             if (row == 0)
             {
                 AppendRow(newMessage);
@@ -178,8 +260,8 @@ namespace LNDExcel
             for (var fieldIndex = 0; fieldIndex < Fields.Count; fieldIndex++)
             {
                 var field = Fields[fieldIndex];
-                var newValue = field.Accessor.GetValue(newMessage).ToString();
-                var oldValue = field.Accessor.GetValue(oldMessage).ToString();
+                var newValue = GetValue(newMessage, field.Accessor);
+                var oldValue = GetValue(oldMessage, field.Accessor);
                 if (oldValue == newValue) continue;
 
                 var dataCell = Ws.Cells[row, StartColumn + fieldIndex];
@@ -265,7 +347,9 @@ namespace LNDExcel
         {
             var data = Ws.Range[Ws.Cells[HeaderRow + 1, StartColumn], Ws.Cells[GetLastRow(), EndColumn]];
             data.ClearContents();
-            Data = new Dictionary<object, TMessageClass>();
+            DisplayData = new Dictionary<object, TMessageClass>();
+            DataList = new List<TMessageClass>();
+            DisplayDataList = new List<TMessageClass>();
         }
     }
 }
