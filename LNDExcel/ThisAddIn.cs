@@ -16,8 +16,9 @@ namespace LNDExcel
         public Workbook Wb;
 
         public ConnectSheet ConnectSheet;
-        public TableSheet<Peer> PeersSheet;
+        public PeersSheet PeersSheet;
         public BalancesSheet BalancesSheet;
+        public TableSheet<Transaction> TransactionsSheet;
         public TableSheet<Channel> OpenChannelsSheet;
         public PendingChannelsSheet PendingChannelsSheet;
         public TableSheet<ChannelCloseSummary> ClosedChannelsSheet;
@@ -66,11 +67,14 @@ namespace LNDExcel
             ConnectSheet.PopulateConfig();
 
             CreateSheet(SheetNames.Peers);
-            PeersSheet = new TableSheet<Peer>(Wb.Sheets[SheetNames.Peers], LApp, Peer.Descriptor, "pub_key");
-            PeersSheet.SetupTable("Peers", 3);
+            PeersSheet = new PeersSheet(Wb.Sheets[SheetNames.Peers], LApp);
 
             CreateSheet(SheetNames.Balances);
             BalancesSheet = new BalancesSheet(Wb.Sheets[SheetNames.Balances], LApp);
+
+            CreateSheet(SheetNames.Transactions);
+            TransactionsSheet = new TableSheet<Transaction>(Wb.Sheets[SheetNames.Transactions], LApp, Transaction.Descriptor, "tx_hash");
+            TransactionsSheet.SetupTable("Transactions");
 
             CreateSheet(SheetNames.OpenChannels);
             OpenChannelsSheet = new TableSheet<Channel>(Wb.Sheets[SheetNames.OpenChannels], LApp, Channel.Descriptor, "chan_id");
@@ -144,7 +148,7 @@ namespace LNDExcel
             {
                 LApp.StopDaemon();
             }
-            catch (RpcException exception)
+            catch (RpcException)
             {
                 NodesSheet.isProcessOurs = false;
             }

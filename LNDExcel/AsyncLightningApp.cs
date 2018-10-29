@@ -62,11 +62,16 @@ namespace LNDExcel
                 case SheetNames.Peers:
                     bw.DoWork += (o, args) => BwQuery(o, args, LndClient.ListPeers);
                     bw.RunWorkerCompleted += (o, args) =>
-                        BwListCompleted<Peer, ListPeersResponse>(o, args, _excelAddIn.PeersSheet);
+                        BwListCompleted<Peer, ListPeersResponse>(o, args, _excelAddIn.PeersSheet.PeersTable);
                     break;
                 case SheetNames.Balances:
                     bw.DoWork += BwBalancesQuery;
                     bw.RunWorkerCompleted += BwBalancesCompleted;
+                    break;
+                case SheetNames.Transactions:
+                    bw.DoWork += (o, args) => BwQuery(o, args, LndClient.GetTransactions);
+                    bw.RunWorkerCompleted += (o, args) =>
+                        BwListCompleted<Transaction, TransactionDetails>(o, args, _excelAddIn.TransactionsSheet);
                     break;
                 case SheetNames.OpenChannels:
                     bw.DoWork += (o, args) => BwQuery(o, args, LndClient.ListChannels);

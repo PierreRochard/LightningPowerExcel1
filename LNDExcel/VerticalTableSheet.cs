@@ -104,6 +104,11 @@ namespace LNDExcel
             }
         }
 
+        private static string GetValue(TMessageClass message, IFieldAccessor targetField)
+        {
+            return targetField.GetValue(message).ToString();
+        }
+
         public void Populate(TMessageClass newMessage)
         {
             var rowIndex = 0;
@@ -112,23 +117,9 @@ namespace LNDExcel
                 if (_excludeList != null && _excludeList.Any(field.Name.Contains)) continue;
 
                 var dataCell = Ws.Cells[_dataStartRow + rowIndex, EndColumn];
-                var value = string.Empty;
-                if (field.IsRepeated && field.Accessor.GetValue(newMessage) is RepeatedField<object> items)
-                {
-                    for (var i = 0; i < items.Count; i++)
-                    {
-                        value += items[i];
-                        if (i < items.Count - 1)
-                        {
-                            value += ",\n";
-                        }
-                    }
-                }
-                else 
-                {
-                    value = field.Accessor.GetValue(newMessage).ToString();
-                }
-                dataCell.Value2 = value;
+
+                var newValue = GetValue(newMessage, field.Accessor);
+                Utilities.AssignCellValue(newMessage, field, newValue, dataCell);
                 Ws.Names.Add(field.Name, dataCell);
                 rowIndex++;
             }
@@ -145,26 +136,7 @@ namespace LNDExcel
                 if (oldValue == newValue) continue;
 
                 var dataCell = Ws.Cells[_dataStartRow + fieldIndex, EndColumn];
-                var value = "";
-
-                if (field.IsRepeated && field.FieldType != FieldType.Message)
-                {
-                    var items = (RepeatedField<string>)field.Accessor.GetValue(newMessage);
-                    for (var i = 0; i < items.Count; i++)
-                    {
-                        value += items[i];
-                        if (i < items.Count - 1)
-                        {
-                            value += ",\n";
-                        }
-                    }
-                }
-                else
-                {
-                    value = newValue;
-                }
-
-                dataCell.Value2 = value;
+                Utilities.AssignCellValue(newMessage, field, newValue, dataCell);
             }
             Data = newMessage;
 

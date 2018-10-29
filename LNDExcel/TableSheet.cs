@@ -74,6 +74,7 @@ namespace LNDExcel
             _sortAscending = sortAscending;
             _wideColumns = new List<string>
             {
+                "hops",
                 "pub_key",
                 "remote_pubkey",
                 "remote_pub_key",
@@ -210,7 +211,15 @@ namespace LNDExcel
                 }
             }
 
-            Ws.Columns.AutoFit();
+            try
+            {
+                Ws.Columns.AutoFit();
+
+            }
+            catch (Exception e)
+            {
+                return;
+            }
             for (var fieldIndex = 0; fieldIndex < Fields.Count; fieldIndex++)
             {
                 var field = Fields[fieldIndex];
@@ -242,7 +251,7 @@ namespace LNDExcel
                 var columnNumber = StartColumn + fieldIndex;
                 var dataCell = Ws.Cells[lastRow, columnNumber];
                 var newValue = GetValue(newMessage, field.Accessor);
-                AssignCellValue(newMessage, field, newValue, dataCell);
+                Utilities.AssignCellValue(newMessage, field, newValue, dataCell);
                 var isWide = _wideColumns != null && _wideColumns.Any(field.Name.Contains);
                 Formatting.TableDataColumn(Ws.Range[Ws.Cells[lastRow, columnNumber], Ws.Cells[lastRow, columnNumber]], isWide);
             }
@@ -265,38 +274,12 @@ namespace LNDExcel
                 if (oldValue == newValue) continue;
 
                 var dataCell = Ws.Cells[row, StartColumn + fieldIndex];
-                AssignCellValue(newMessage, field, newValue, dataCell);
+                Utilities.AssignCellValue(newMessage, field, newValue, dataCell);
             }
 
         }
 
-        private static void AssignCellValue(TMessageClass newMessage, FieldDescriptor field, string newValue, dynamic dataCell)
-        {
-            var value = "";
 
-            if (field.IsRepeated && field.FieldType != FieldType.Message)
-            {
-                var items = (RepeatedField<string>)field.Accessor.GetValue(newMessage);
-                for (var i = 0; i < items.Count; i++)
-                {
-                    value += items[i];
-                    if (i < items.Count - 1)
-                    {
-                        value += ",\n";
-                    }
-                }
-                dataCell.Value2 = value;
-            }
-            else if (field.FieldType == FieldType.UInt64)
-            {
-                dataCell.NumberFormat = "@";
-                dataCell.Value2 = newValue;
-            }
-            else
-            {
-                dataCell.Value2 = newValue;
-            }
-        }
 
         private int GetRow(object uniqueKey)
         {
