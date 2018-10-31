@@ -36,6 +36,7 @@ namespace LNDExcel
             Refresh(SheetNames.ClosedChannels);
             Refresh(SheetNames.PendingChannels);
             Refresh(SheetNames.OpenChannels);
+            Refresh(SheetNames.Transactions);
             Refresh(SheetNames.Balances);
             Refresh(SheetNames.Peers);
             Refresh(SheetNames.Connect);
@@ -173,7 +174,7 @@ namespace LNDExcel
 
         }
 
-        public void SendPayment(PayReq paymentRequest, List<Route> routes = null)
+        public void SendPayment(string paymentRequest, List<Route> routes = null)
         {
             var bw = new BackgroundWorker {WorkerReportsProgress = true};
             if (SynchronizationContext.Current == null)
@@ -194,7 +195,7 @@ namespace LNDExcel
             _excelAddIn.SendPaymentSheet.UpdateSendPaymentProgress(e.ProgressPercentage);
         }
 
-        private void BwSendPayment(object sender, DoWorkEventArgs e, PayReq paymentRequest, int timeout, List<Route> routes = null)
+        private void BwSendPayment(object sender, DoWorkEventArgs e, string paymentRequest, int timeout, List<Route> routes = null)
         {
             if (sender != null)
             {
@@ -202,7 +203,7 @@ namespace LNDExcel
             }
         }
 
-        private async Task<SendResponse> ProgressSend(object sender, PayReq paymentRequest, int timeout, List<Route> routes = null)
+        private async Task<SendResponse> ProgressSend(object sender, string paymentRequest, int timeout, List<Route> routes = null)
         {
             var sendTask = SendPaymentAsync(sender, paymentRequest, timeout, routes);
             var i = 0;
@@ -217,9 +218,9 @@ namespace LNDExcel
         }
 
         // ReSharper disable once UnusedParameter.Local
-        private async Task<SendResponse> SendPaymentAsync(object sender, PayReq paymentRequest, int timeout, List<Route> routes = null)
+        private async Task<SendResponse> SendPaymentAsync(object sender, string paymentRequest, int timeout, List<Route> routes = null)
         {
-            var stream = routes != null && routes.Count != 0 ? LndClient.SendToRoute(paymentRequest, routes, timeout) : LndClient.SendPayment(paymentRequest, timeout);
+            var stream = LndClient.SendPayment(paymentRequest, timeout);
             await stream.MoveNext(CancellationToken.None);
             return stream.Current;
         }
@@ -237,7 +238,6 @@ namespace LNDExcel
                 _excelAddIn.SendPaymentSheet.PopulateSendPaymentError(response);
             }
         }
-
 
         public PayReq DecodePaymentRequest(string payReq)
         {

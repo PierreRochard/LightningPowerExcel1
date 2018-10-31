@@ -1,8 +1,11 @@
-﻿using System.Threading;
+﻿using System.Collections;
+using System.Linq;
+using System.Threading;
 using System.Windows.Forms;
 using Google.Protobuf;
 using Google.Protobuf.Collections;
 using Google.Protobuf.Reflection;
+using Lnrpc;
 using Microsoft.Office.Interop.Excel;
 
 namespace LNDExcel
@@ -45,11 +48,11 @@ namespace LNDExcel
             return button;
         }
 
-        public static void AssignCellValue<TMessageClass>(TMessageClass newMessage, FieldDescriptor field, string newValue, dynamic dataCell) where TMessageClass : IMessage
+        public static string GetValue<TMessageClass>(FieldDescriptor field, TMessageClass newMessage) where TMessageClass : IMessage
         {
             var value = "";
 
-            if (field.IsRepeated && field.FieldType != FieldType.Message)
+            if (field.IsRepeated && field.FieldType == FieldType.String)
             {
                 var items = (RepeatedField<string>)field.Accessor.GetValue(newMessage);
                 for (var i = 0; i < items.Count; i++)
@@ -60,9 +63,33 @@ namespace LNDExcel
                         value += ",\n";
                     }
                 }
-                dataCell.Value2 = value;
             }
-            else switch (field.FieldType)
+            else if (field.IsRepeated && field.FieldType == FieldType.Message)
+            {
+                var enumerable = field.Accessor.GetValue(newMessage) as IEnumerable;
+                var items = enumerable.Cast<object>().ToList();
+                for (var index = 0; index < items.Count; index++)
+                {
+                    var item = items[index];
+                    value += item.ToString();
+                    if (index < items.Count - 1)
+                    {
+                        value += ",\n";
+                    }
+                }
+            }
+            else
+            {
+                return field.Accessor.GetValue(newMessage).ToString();
+            }
+
+            return value;
+        }
+
+        public static void AssignCellValue<TMessageClass>(TMessageClass newMessage, FieldDescriptor field, string newValue, dynamic dataCell) where TMessageClass : IMessage
+        {
+
+            switch (field.FieldType)
             {
                 case FieldType.UInt64:
                     dataCell.NumberFormat = "@";

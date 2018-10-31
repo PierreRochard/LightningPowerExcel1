@@ -26,6 +26,7 @@ namespace LNDExcel
         public Range Title;
 
         private readonly List<string> _wideColumns;
+        private readonly List<string> _timestampColumns;
         private readonly IFieldAccessor _uniqueKeyField;
         private readonly string _uniqueKeyName;
         private readonly int _limit;
@@ -86,7 +87,14 @@ namespace LNDExcel
                 "chain_hash",
                 "payment_preimage",
                 "payment_hash",
-                "path"
+                "path",
+                "tx_hash",
+                "block_hash",
+                "dest_addresses"
+            };
+            _timestampColumns = new List<string>
+            {
+                "time_stamp"
             };
         }
 
@@ -155,10 +163,10 @@ namespace LNDExcel
                 var childField = nestedField.Item2;
                 if (childField.Descriptor.Name == targetField.Descriptor.Name)
                 {
-                    return childField.GetValue((IMessage) parentField.GetValue(message)).ToString();
+                    return Utilities.GetValue(childField.Descriptor, (IMessage) parentField.GetValue(message));
                 }
             }
-            return targetField.GetValue(message).ToString();
+            return Utilities.GetValue(targetField.Descriptor, message);
         }
         
         public void Update(RepeatedField<TMessageClass> data)

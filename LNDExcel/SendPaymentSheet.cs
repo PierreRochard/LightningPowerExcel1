@@ -22,7 +22,6 @@ namespace LNDExcel
 
         private Range _payReqLabelCell;
         private Range _payReqInputCell;
-        private Range _payReqInputRange;
         private Range _payReqRange;
 
         private Range _errorData;
@@ -51,11 +50,10 @@ namespace LNDExcel
             _payReqLabelCell.Columns.AutoFit();
 
             _payReqInputCell = Ws.Cells[StartRow, StartColumn + 1];
+            _payReqInputCell.Interior.Color = Color.AliceBlue;
+            Formatting.WideTableColumn(_payReqInputCell);
 
-            _payReqInputRange = Ws.Range[_payReqInputCell, Ws.Cells[StartRow, StartColumn + 15]];
-            _payReqInputRange.Interior.Color = Color.AliceBlue;
-
-            _payReqRange = Ws.Range[_payReqLabelCell, _payReqInputRange];
+            _payReqRange = Ws.Range[_payReqLabelCell, _payReqInputCell];
             Formatting.UnderlineBorder(_payReqRange);
 
             Ws.Change += WsOnChangeParsePayReq;
@@ -82,7 +80,7 @@ namespace LNDExcel
             _paymentPreimageLabel.Value2 = "Proof of Payment";
             _paymentPreimageLabel.Font.Italic = true;
 
-            _paymentPreimageCell = Ws.Cells[paymentResponseDataStartRow, StartColumn + 1];
+            _paymentPreimageCell = Ws.Cells[paymentResponseDataStartRow, StartColumn + 2];
             _paymentPreimageCell.Interior.Color = Color.PaleGreen;
             
             RouteTakenTable = new VerticalTableSheet<Route>(Ws, LApp, Route.Descriptor, new List<string> { "hops" });
@@ -191,11 +189,11 @@ namespace LNDExcel
             {
                 if (PotentialRoutesTable.DataList == null || PotentialRoutesTable.DataList.Count == 0)
                 {
-                    LApp.SendPayment(PaymentRequestTable.Data);
+                    LApp.SendPayment(payReq);
                 }
                 else
                 {
-                    LApp.SendPayment(PaymentRequestTable.Data, PotentialRoutesTable.DataList);
+                    LApp.SendPayment(payReq, PotentialRoutesTable.DataList);
                 }
             }
             catch (RpcException rpcException)

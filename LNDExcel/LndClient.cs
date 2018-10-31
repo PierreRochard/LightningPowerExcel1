@@ -314,15 +314,11 @@ namespace LNDExcel
             return response;
         }
 
-        public IAsyncStreamReader<SendResponse> SendPayment(PayReq paymentRequest, int timeout)
+        public IAsyncStreamReader<SendResponse> SendPayment(string paymentRequest, int timeout)
         {
             var deadline = DateTime.UtcNow.AddSeconds(timeout);
             var duplexPaymentStreaming = GetLightningClient().SendPayment(Metadata.Empty, deadline, CancellationToken.None);
-            var request = new SendRequest
-            {
-                Amt = paymentRequest.NumSatoshis,
-                DestString = paymentRequest.Destination
-            };
+            var request = new SendRequest {PaymentRequest = paymentRequest};
             duplexPaymentStreaming.RequestStream.WriteAsync(request);
             return duplexPaymentStreaming.ResponseStream;
         }
@@ -333,7 +329,7 @@ namespace LNDExcel
             var duplexPaymentStreaming = GetLightningClient().SendToRoute(Metadata.Empty, deadline, CancellationToken.None);
             var request = new SendToRouteRequest
             {
-                PaymentHashString = paymentRequest.PaymentHash
+                PaymentHash = ByteString.CopyFrom(paymentRequest.PaymentHash, Encoding.UTF8)
             };
             if (routes != null) request.Routes.Add(routes);
             duplexPaymentStreaming.RequestStream.WriteAsync(request);
