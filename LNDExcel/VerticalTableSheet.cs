@@ -13,9 +13,9 @@ namespace LNDExcel
         public Worksheet Ws;
         public TMessageClass Data;
 
-        private int _startRow;
+        public int StartRow;
         private int _dataStartRow;
-        private int _startColumn;
+        public int StartColumn;
         public int EndColumn;
         public int EndRow;
         private readonly IList<FieldDescriptor> _fields;
@@ -32,10 +32,10 @@ namespace LNDExcel
         
         public void SetupVerticalTable(string tableName, int startRow = 2, int startColumn = 2)
         {
-            _startRow = startRow;
+            StartRow = startRow;
             _dataStartRow = startRow + 1;
-            _startColumn = startColumn;
-            EndColumn = _startColumn + 1;
+            StartColumn = startColumn;
+            EndColumn = StartColumn + 1;
 
             if (_excludeList == null)
             {
@@ -46,14 +46,14 @@ namespace LNDExcel
                 EndRow = startRow + _fields.Count(f => !_excludeList.Any(f.Name.Contains));
             }
 
-            var title = Ws.Cells[_startRow, _startColumn];
+            var title = Ws.Cells[StartRow, StartColumn];
             title.Font.Italic = true;
             title.Value2 = tableName;
 
-            var table = Ws.Range[Ws.Cells[_dataStartRow, _startColumn], Ws.Cells[EndRow, EndColumn]];
+            var table = Ws.Range[Ws.Cells[_dataStartRow, StartColumn], Ws.Cells[EndRow, EndColumn]];
             Formatting.VerticalTable(table);
 
-            var header = Ws.Range[Ws.Cells[_dataStartRow, _startColumn], Ws.Cells[EndRow, _startColumn]];
+            var header = Ws.Range[Ws.Cells[_dataStartRow, StartColumn], Ws.Cells[EndRow, StartColumn]];
             Formatting.VerticalTableHeaderColumn(header);
 
             var data = Ws.Range[Ws.Cells[_dataStartRow, EndColumn], Ws.Cells[EndRow, EndColumn]];
@@ -66,17 +66,17 @@ namespace LNDExcel
 
                 var rowNumber = _dataStartRow + rowIndex;
 
-                var headerCell = Ws.Cells[rowNumber, _startColumn];
+                var headerCell = Ws.Cells[rowNumber, StartColumn];
                 var fieldName = Utilities.FormatFieldName(field.Name);
                 headerCell.Value2 = fieldName;
 
-                var rowRange = Ws.Range[Ws.Cells[rowNumber, _startColumn], Ws.Cells[rowNumber, EndColumn]];
+                var rowRange = Ws.Range[Ws.Cells[rowNumber, StartColumn], Ws.Cells[rowNumber, EndColumn]];
                 Formatting.VerticalTableRow(rowRange, rowNumber);
 
                 rowIndex++;
             }
 
-            Ws.Columns.AutoFit();
+            title.Columns.AutoFit();
         }
 
         public void Clear()
@@ -120,6 +120,7 @@ namespace LNDExcel
 
                 var newValue = GetValue(newMessage, field.Accessor);
                 Utilities.AssignCellValue(newMessage, field, newValue, dataCell);
+                Formatting.VerticalTableRow(dataCell, rowIndex);
                 Ws.Names.Add(field.Name, dataCell);
                 rowIndex++;
             }

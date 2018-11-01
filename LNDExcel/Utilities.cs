@@ -68,15 +68,7 @@ namespace LNDExcel
             {
                 var enumerable = field.Accessor.GetValue(newMessage) as IEnumerable;
                 var items = enumerable.Cast<object>().ToList();
-                for (var index = 0; index < items.Count; index++)
-                {
-                    var item = items[index];
-                    value += item.ToString();
-                    if (index < items.Count - 1)
-                    {
-                        value += ",\n";
-                    }
-                }
+                return $"{items.Count} {field.Name}";
             }
             else
             {

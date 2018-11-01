@@ -75,7 +75,6 @@ namespace LNDExcel
             _sortAscending = sortAscending;
             _wideColumns = new List<string>
             {
-                "hops",
                 "pub_key",
                 "remote_pubkey",
                 "remote_pub_key",

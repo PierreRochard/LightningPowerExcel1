@@ -114,12 +114,14 @@ namespace LNDExcel
         {
             cells.HorizontalAlignment = XlHAlign.xlHAlignLeft;
             cells.NumberFormat = "0";
+            cells.WrapText = true;
         }
 
         public static void VerticalTableRow(Range cells, int rowNumber)
         {
             var isEven = rowNumber % 2 == 0;
             cells.Interior.Color = isEven ? Color.LightYellow : Color.White;
+            cells.RowHeight = 14.3;
         }
 
         public static void ActivateErrorCell(Range cell)

@@ -34,7 +34,7 @@ namespace LNDExcel
         public int StartColumn = 2;
         public int StartRow = 2;
 
-        private const int PayReqColumnWidth = 70;
+        private const int PayReqColumnWidth = 15;
 
         public SendPaymentSheet(Worksheet ws, AsyncLightningApp lApp)
         {
@@ -72,16 +72,19 @@ namespace LNDExcel
             _sendStatusRange = Ws.Cells[sendPaymentButtonRow + 3, StartColumn];
             _sendStatusRange.Font.Italic = true;
 
-            Button clearPaymentInfoButton = Utilities.CreateButton("clearPaymentInfo", Ws, Ws.Cells[sendPaymentButtonRow + 6, StartColumn], "Clear");
+            Button clearPaymentInfoButton = Utilities.CreateButton("clearPaymentInfo", Ws, Ws.Cells[sendPaymentButtonRow + 3, StartColumn], "Clear");
             clearPaymentInfoButton.Click += ClearPaymentInfoButtonOnClick;
             
-            var paymentResponseDataStartRow = sendPaymentButtonRow + 9;
-            _paymentPreimageLabel = Ws.Cells[paymentResponseDataStartRow, StartColumn + 1];
+            var paymentResponseDataStartRow = sendPaymentButtonRow + 5;
+            _paymentPreimageLabel = Ws.Cells[paymentResponseDataStartRow, StartColumn];
             _paymentPreimageLabel.Value2 = "Proof of Payment";
             _paymentPreimageLabel.Font.Italic = true;
+            Formatting.WideTableColumn(_paymentPreimageLabel);
 
-            _paymentPreimageCell = Ws.Cells[paymentResponseDataStartRow, StartColumn + 2];
+            _paymentPreimageCell = Ws.Cells[paymentResponseDataStartRow, StartColumn + 1];
             _paymentPreimageCell.Interior.Color = Color.PaleGreen;
+            _paymentPreimageCell.RowHeight = 14.3;
+            _paymentPreimageCell.WrapText = true;
             
             RouteTakenTable = new VerticalTableSheet<Route>(Ws, LApp, Route.Descriptor, new List<string> { "hops" });
             RouteTakenTable.SetupVerticalTable("Payment Summary", paymentResponseDataStartRow + 3);
@@ -222,6 +225,7 @@ namespace LNDExcel
             if (response.PaymentError == "")
             {
                 _paymentPreimageCell.Value2 = BitConverter.ToString(response.PaymentPreimage.ToByteArray()).Replace("-", "").ToLower();
+                _paymentPreimageCell.RowHeight = 14.3;
 
                 RouteTakenTable.Populate(response.PaymentRoute);
                 HopTable.Update(response.PaymentRoute.Hops);

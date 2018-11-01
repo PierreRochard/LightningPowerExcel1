@@ -13,6 +13,7 @@ namespace LNDExcel
         public AsyncLightningApp LApp;
         public Worksheet Ws;
 
+        public MessageForm<ConnectPeerRequest> PeersForm;
         public TableSheet<Peer> PeersTable;
 
         public int StartColumn = 2;
@@ -23,8 +24,9 @@ namespace LNDExcel
             Ws = ws;
             LApp = lApp;
 
+            PeersForm = new MessageForm<ConnectPeerRequest>(ws, LApp, ConnectPeerRequest.Descriptor, "Connect to a peer");
             PeersTable = new TableSheet<Peer>(ws, LApp, Peer.Descriptor, "pub_key");
-            PeersTable.SetupTable("Peers");
+            PeersTable.SetupTable("Peers", startRow: PeersForm.EndRow + 2);
         }
 
 
