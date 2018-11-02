@@ -114,9 +114,7 @@ namespace LNDExcel
         private void BwBalancesCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
             var result = (Tuple<WalletBalanceResponse, ChannelBalanceResponse>)e.Result;
-            _excelAddIn.BalancesSheet.ChannelBalanceSheet.Update(result.Item2);
-            _excelAddIn.BalancesSheet.WalletBalanceSheet.Update(result.Item1);
-            Utilities.RemoveLoadingMark(_excelAddIn.Wb.Sheets[SheetNames.Balances]);
+            _excelAddIn.BalancesSheet.Update(result);
         }
 
         private void BwBalancesQuery(object sender, DoWorkEventArgs e)
@@ -170,7 +168,6 @@ namespace LNDExcel
                 _excelAddIn.ConnectSheet.DisplayError("Connect error", rpcException?.Status.Detail);
                 _excelAddIn.ConnectSheet.Ws.Activate();
             }
-            Utilities.RemoveLoadingMark(tableSheet.Ws);
 
         }
 

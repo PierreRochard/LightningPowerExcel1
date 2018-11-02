@@ -207,7 +207,6 @@
     <Compile Include="NodesSheet.cs" />
     <Compile Include="Formatting.cs" />
     <Compile Include="AsyncLightningApp.cs" />
-    <Compile Include="FormSheet.cs" />
     <Compile Include="LndClient.cs" />
     <Compile Include="PeersSheet.cs" />
     <Compile Include="PendingChannelsSheet.cs" />
@@ -215,6 +214,7 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="TableSheet.cs" />
+    <Compile Include="TransactionsSheet.cs" />
     <Compile Include="Utilities.cs" />
     <Compile Include="VerticalTableSheet.cs" />
     <EmbeddedResource Include="Properties\Resources.resx">

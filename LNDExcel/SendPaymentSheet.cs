@@ -103,7 +103,7 @@ namespace LNDExcel
             PaymentRequestTable.Clear();
             PotentialRoutesTable.Clear();
             ClearSendStatus();
-            ClearErrorData();
+            Utilities.ClearErrorData(_errorData);
             ClearSendPaymentResponseData();
         }
 
@@ -112,11 +112,6 @@ namespace LNDExcel
             _payReqInputCell.Value2 = "";
         }
 
-        private void ClearErrorData()
-        {
-            _errorData.Value2 = "";
-            Formatting.DeactivateErrorCell(_errorData);
-        }
 
         private void ClearSendStatus()
         {
@@ -128,12 +123,6 @@ namespace LNDExcel
             _paymentPreimageCell.Value2 = "";
             RouteTakenTable.Clear();
             HopTable.Clear();
-        }
-
-        private void DisplayError(string errorType, string errorMessage)
-        {
-            _errorData.Value2 = $"{errorType}: {errorMessage}";
-            Formatting.ActivateErrorCell(_errorData);
         }
 
         private void WsOnChangeParsePayReq(Range target)
@@ -157,11 +146,11 @@ namespace LNDExcel
             }
             catch (RpcException e)
             {
-                DisplayError("Parsing error", e.Status.Detail);
+                Utilities.DisplayError(_errorData, "Parsing error", e);
                 return;
             }
             PaymentRequestTable.Update(response);
-            ClearErrorData();
+            Utilities.ClearErrorData(_errorData);
 
             try
             {
@@ -170,7 +159,7 @@ namespace LNDExcel
             }
             catch (RpcException e)
             {
-                DisplayError("Query route error", e.Status.Detail);
+                Utilities.DisplayError(_errorData, "Query route error", e);
                 return;
             }
 
@@ -201,22 +190,22 @@ namespace LNDExcel
             }
             catch (RpcException rpcException)
             {
-                DisplayError("Payment error", rpcException.Status.Detail);
+                Utilities.DisplayError(_errorData, "Payment error", rpcException);
             }
         }
 
         public void MarkSendingPayment()
         {
             ClearSendPaymentResponseData();
-            ClearErrorData();
+            Utilities.ClearErrorData(_errorData);
             // Indicate payment is being sent below send button
             _sendStatusRange.Value2 = "Sending payment...";
         }
 
         public void PopulateSendPaymentError(RpcException exception)
         {
-            _errorData.Value2 = exception.Status.Detail;
-            _sendStatusRange.Value2 = "";
+            Utilities.DisplayError(_errorData, "Payment error", exception);
+            ClearSendStatus();
         }
 
         public void PopulateSendPaymentResponse(SendResponse response)
@@ -233,7 +222,7 @@ namespace LNDExcel
             }
             else
             {
-                DisplayError("Payment error", response.PaymentError);
+                Utilities.DisplayError(_errorData, "Payment error", response.PaymentError);
             }
             Utilities.EnableButton(Ws, "sendPayment", true);
         }

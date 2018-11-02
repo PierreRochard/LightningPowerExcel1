@@ -18,7 +18,7 @@ namespace LNDExcel
         public ConnectSheet ConnectSheet;
         public PeersSheet PeersSheet;
         public BalancesSheet BalancesSheet;
-        public TableSheet<Transaction> TransactionsSheet;
+        public TransactionsSheet TransactionsSheet;
         public TableSheet<Channel> OpenChannelsSheet;
         public PendingChannelsSheet PendingChannelsSheet;
         public TableSheet<ChannelCloseSummary> ClosedChannelsSheet;
@@ -73,8 +73,7 @@ namespace LNDExcel
             BalancesSheet = new BalancesSheet(Wb.Sheets[SheetNames.Balances], LApp);
 
             CreateSheet(SheetNames.Transactions);
-            TransactionsSheet = new TableSheet<Transaction>(Wb.Sheets[SheetNames.Transactions], LApp, Transaction.Descriptor, "tx_hash");
-            TransactionsSheet.SetupTable("Transactions");
+            TransactionsSheet = new TransactionsSheet(Wb.Sheets[SheetNames.Transactions], LApp);
 
             CreateSheet(SheetNames.OpenChannels);
             OpenChannelsSheet = new TableSheet<Channel>(Wb.Sheets[SheetNames.OpenChannels], LApp, Channel.Descriptor, "chan_id");

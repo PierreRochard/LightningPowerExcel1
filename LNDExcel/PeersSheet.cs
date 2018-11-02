@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using Grpc.Core;
+﻿using Grpc.Core;
 using Lnrpc;
 using Microsoft.Office.Interop.Excel;
-using Button = Microsoft.Office.Tools.Excel.Controls.Button;
 
 namespace LNDExcel
 {
@@ -13,7 +9,7 @@ namespace LNDExcel
         public AsyncLightningApp LApp;
         public Worksheet Ws;
 
-        public MessageForm<ConnectPeerRequest> PeersForm;
+        public MessageForm<ConnectPeerRequest, ConnectPeerResponse> PeersForm;
         public TableSheet<Peer> PeersTable;
 
         public int StartColumn = 2;
@@ -24,13 +20,29 @@ namespace LNDExcel
             Ws = ws;
             LApp = lApp;
 
-            PeersForm = new MessageForm<ConnectPeerRequest>(ws, LApp, ConnectPeerRequest.Descriptor, "Connect to a peer");
+            PeersForm = new MessageForm<ConnectPeerRequest, ConnectPeerResponse>(ws, LApp, LApp.LndClient.ConnectPeer, ConnectPeerRequest.Descriptor, "Connect to a peer");
             PeersTable = new TableSheet<Peer>(ws, LApp, Peer.Descriptor, "pub_key");
             PeersTable.SetupTable("Peers", startRow: PeersForm.EndRow + 2);
+
+            Ws.Change += WsOnChange;
         }
 
-
-
-
+        private void WsOnChange(Range target)
+        {
+            if (target.Row < PeersTable.StartRow || target.Row > PeersTable.EndRow ||
+                (target.Value2?.ToString() != "" && target.Value2 != null)) return;
+            PeersForm.ClearErrorData();
+            try
+            {
+                var peer = PeersTable.DataList[target.Row - PeersTable.DataStartRow];
+                LApp.LndClient.DisconnectPeer(peer.PubKey);
+                PeersTable.RemoveRow(target.Row);
+                LApp.Refresh(SheetNames.Peers);
+            }
+            catch (RpcException e)
+            {
+                PeersForm.DisplayError(e);
+            }
+        }
     }
 }

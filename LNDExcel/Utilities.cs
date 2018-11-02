@@ -1,17 +1,33 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
 using Google.Protobuf;
 using Google.Protobuf.Collections;
 using Google.Protobuf.Reflection;
-using Lnrpc;
+using Grpc.Core;
 using Microsoft.Office.Interop.Excel;
 
 namespace LNDExcel
 {
     public class Utilities
     {
+        public static void DisplayError(Range errorData, string errorType, string errorMessage)
+        {
+            errorData.Value2 = $"{errorType}: {errorMessage}";
+            Formatting.ActivateErrorCell(errorData);
+        }
+
+
+        public static void ClearErrorData(Range errorData)
+        {
+            errorData.Value2 = "";
+            Formatting.DeactivateErrorCell(errorData);
+        }
+
         public static void MarkAsLoadingTable(Worksheet ws)
         {
             ws.Cells[1, 2].Value2 = "Loading...";
@@ -67,7 +83,7 @@ namespace LNDExcel
             else if (field.IsRepeated && field.FieldType == FieldType.Message)
             {
                 var enumerable = field.Accessor.GetValue(newMessage) as IEnumerable;
-                var items = enumerable.Cast<object>().ToList();
+                var items = (enumerable ?? throw new InvalidOperationException()).Cast<object>().ToList();
                 return $"{items.Count} {field.Name}";
             }
             else
@@ -78,22 +94,43 @@ namespace LNDExcel
             return value;
         }
 
+        public static DateTime UnixTimeStampToDateTime(long unixTimeStamp)
+        {
+            // Unix timestamp is seconds past epoch
+            var dtDateTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+            dtDateTime = dtDateTime.AddSeconds(unixTimeStamp).ToLocalTime();
+            return dtDateTime;
+        }
+
         public static void AssignCellValue<TMessageClass>(TMessageClass newMessage, FieldDescriptor field, string newValue, dynamic dataCell) where TMessageClass : IMessage
         {
-
-            switch (field.FieldType)
+            var dateFields = new List<string>{"time_stamp", "creation_date"};
+            var isDate = dateFields.Any(field.Name.Contains);
+            if (isDate)
             {
-                case FieldType.UInt64:
-                    dataCell.NumberFormat = "@";
-                    dataCell.Value2 = newValue;
-                    break;
+                dataCell.NumberFormat = CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern;
+                var value = UnixTimeStampToDateTime(long.Parse(newValue));
+                dataCell.Value2 = value;
+            }
+            else
+            {
+                switch (field.FieldType)
+                {
+                    case FieldType.UInt64:
+                        dataCell.NumberFormat = "@";
+                        break;
+                    case FieldType.Int64:
+                        dataCell.NumberFormat = "_(* #,##0_);_(* (#,##0);_(* \"-\"??_);_(@_)";
+                        break;
+                }
+                dataCell.Value2 = newValue;
 
-                default:
-                    //dataCell.NumberFormat = "_(* #,##0_);_(* (#,##0);_(* \"-\"??_);_(@_)";
-                    dataCell.Value2 = newValue;
-                    break;
             }
         }
 
+        public static void DisplayError(Range errorData, string errorType, RpcException errorMessage)
+        {
+            DisplayError(errorData, errorType, errorMessage.Status.Detail);
+        }
     }
 }

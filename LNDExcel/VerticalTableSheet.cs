@@ -116,11 +116,13 @@ namespace LNDExcel
             {
                 if (_excludeList != null && _excludeList.Any(field.Name.Contains)) continue;
 
-                var dataCell = Ws.Cells[_dataStartRow + rowIndex, EndColumn];
+                var rowNumber = _dataStartRow + rowIndex;
+                var dataCell = Ws.Cells[rowNumber, EndColumn];
+                var dataRow = Ws.Range[Ws.Cells[rowNumber, StartColumn], dataCell];
+                Formatting.VerticalTableRow(dataRow, rowNumber);
 
                 var newValue = GetValue(newMessage, field.Accessor);
                 Utilities.AssignCellValue(newMessage, field, newValue, dataCell);
-                Formatting.VerticalTableRow(dataCell, rowIndex);
                 Ws.Names.Add(field.Name, dataCell);
                 rowIndex++;
             }

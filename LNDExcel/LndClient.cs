@@ -171,10 +171,8 @@ namespace LNDExcel
             return response;
         }
 
-        public ConnectPeerResponse ConnectPeer(string pubkey, string host, bool permanent)
+        public ConnectPeerResponse ConnectPeer(ConnectPeerRequest request)
         {
-            var address = new LightningAddress {Host = host, Pubkey = pubkey};
-            var request = new ConnectPeerRequest{Addr = address, Perm = permanent};
             var response = GetLightningClient().ConnectPeer(request);
             return response;
         }

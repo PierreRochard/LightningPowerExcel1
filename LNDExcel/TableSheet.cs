@@ -14,6 +14,7 @@ namespace LNDExcel
         public Worksheet Ws;
         
         public int StartRow;
+        public int DataStartRow;
         public int HeaderRow;
         public int StartColumn;
         public int EndColumn;
@@ -101,6 +102,7 @@ namespace LNDExcel
         {
             StartRow = startRow;
             HeaderRow = startRow + 1;
+            DataStartRow = HeaderRow + 1;
             StartColumn = startColumn;
             EndColumn = StartColumn + Fields.Count - 1;
             EndRow = HeaderRow + rowCount;
@@ -134,9 +136,9 @@ namespace LNDExcel
                 Formatting.WideTableColumn(Ws.Range[Ws.Cells[1, StartColumn], Ws.Cells[100, EndColumn]]);
             }
 
-            for (var rowI = 1; rowI <= rowCount; rowI++)
+            for (var rowI = 0; rowI <= rowCount; rowI++)
             {
-                var rowNumber = rowI + HeaderRow;
+                var rowNumber = rowI + DataStartRow;
                 var rowRange = Ws.Range[Ws.Cells[rowNumber, StartColumn], Ws.Cells[rowNumber, EndColumn]];
                 Formatting.TableDataRow(rowRange, rowNumber % 2 == 0);
             }
@@ -238,11 +240,17 @@ namespace LNDExcel
 
             Formatting.TableTitle(Title);
             EndRow = GetLastRow();
+            Utilities.RemoveLoadingMark(Ws);
         }
 
         private void RemoveRow(object uniqueKey)
         {
             var rowNumber = GetRow(uniqueKey);
+            RemoveRow(rowNumber);
+        }
+
+        public void RemoveRow(int rowNumber)
+        {
             if (rowNumber == 0) return;
             var range = Ws.Range[Ws.Cells[rowNumber, StartColumn], Ws.Cells[rowNumber, EndColumn]];
             range.Delete(XlDeleteShiftDirection.xlShiftUp);
@@ -285,8 +293,6 @@ namespace LNDExcel
             }
 
         }
-
-
 
         private int GetRow(object uniqueKey)
         {
