@@ -19,9 +19,7 @@ namespace LNDExcel
         public PeersSheet PeersSheet;
         public BalancesSheet BalancesSheet;
         public TransactionsSheet TransactionsSheet;
-        public TableSheet<Channel> OpenChannelsSheet;
-        public PendingChannelsSheet PendingChannelsSheet;
-        public TableSheet<ChannelCloseSummary> ClosedChannelsSheet;
+        public ChannelsSheet ChannelsSheet;
         public TableSheet<Payment> PaymentsSheet;
         public SendPaymentSheet SendPaymentSheet;
         public NodeSheet NodesSheet;
@@ -75,17 +73,9 @@ namespace LNDExcel
             CreateSheet(SheetNames.Transactions);
             TransactionsSheet = new TransactionsSheet(Wb.Sheets[SheetNames.Transactions], LApp);
 
-            CreateSheet(SheetNames.OpenChannels);
-            OpenChannelsSheet = new TableSheet<Channel>(Wb.Sheets[SheetNames.OpenChannels], LApp, Channel.Descriptor, "chan_id");
-            OpenChannelsSheet.SetupTable("Open Channels");
-
-            CreateSheet(SheetNames.PendingChannels);
-            PendingChannelsSheet = new PendingChannelsSheet(Wb.Sheets[SheetNames.PendingChannels], LApp);
-
-            CreateSheet(SheetNames.ClosedChannels);
-            ClosedChannelsSheet = new TableSheet<ChannelCloseSummary>(Wb.Sheets[SheetNames.ClosedChannels], LApp, ChannelCloseSummary.Descriptor, "chan_id");
-            ClosedChannelsSheet.SetupTable("Closed Channels");
-
+            CreateSheet(SheetNames.Channels);
+            ChannelsSheet = new ChannelsSheet(Wb.Sheets[SheetNames.Channels], LApp);
+            
             CreateSheet(SheetNames.Payments);
             PaymentsSheet = new TableSheet<Payment>(Wb.Sheets[SheetNames.Payments], LApp, Payment.Descriptor, "payment_hash");
             PaymentsSheet.SetupTable("Payments");

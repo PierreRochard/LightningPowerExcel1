@@ -143,6 +143,12 @@ namespace LNDExcel
             try
             {
                 response = LApp.DecodePaymentRequest(payReq);
+                PaymentRequestTable.Clear();
+                PotentialRoutesTable.Clear();
+                ClearSendStatus();
+                Utilities.ClearErrorData(_errorData);
+                ClearSendPaymentResponseData();
+
             }
             catch (RpcException e)
             {

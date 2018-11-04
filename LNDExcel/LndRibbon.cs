@@ -23,8 +23,11 @@ namespace LNDExcel
 
         private void Button1_Click(object sender, RibbonControlEventArgs e)
         {
-            //var address = Globals.ThisAddIn.LApp.LndClient.NewAddress();
-            //editBox2.Text = address.Address;
+            if (Globals.ThisAddIn.LApp != null)
+            {
+                var address = Globals.ThisAddIn.LApp.LndClient.NewAddress();
+                editBox2.Text = address.Address;
+            }
         }
     }
 }

@@ -33,9 +33,7 @@ namespace LNDExcel
             }
             LndClient.TryUnlockWallet(LndClient.Config.Password);
             Refresh(SheetNames.Payments);
-            Refresh(SheetNames.ClosedChannels);
-            Refresh(SheetNames.PendingChannels);
-            Refresh(SheetNames.OpenChannels);
+            Refresh(SheetNames.Channels);
             Refresh(SheetNames.Transactions);
             Refresh(SheetNames.Balances);
             Refresh(SheetNames.Peers);
@@ -72,21 +70,11 @@ namespace LNDExcel
                 case SheetNames.Transactions:
                     bw.DoWork += (o, args) => BwQuery(o, args, LndClient.GetTransactions);
                     bw.RunWorkerCompleted += (o, args) =>
-                        BwListCompleted<Transaction, TransactionDetails>(o, args, _excelAddIn.TransactionsSheet);
+                        BwListCompleted<Transaction, TransactionDetails>(o, args, _excelAddIn.TransactionsSheet.TransactionsTable);
                     break;
-                case SheetNames.OpenChannels:
-                    bw.DoWork += (o, args) => BwQuery(o, args, LndClient.ListChannels);
-                    bw.RunWorkerCompleted += (o, args) =>
-                        BwListCompleted<Channel, ListChannelsResponse>(o, args, _excelAddIn.OpenChannelsSheet);
-                    break;
-                case SheetNames.PendingChannels:
-                    bw.DoWork += (o, args) => BwQuery(o, args, LndClient.ListPendingChannels);
+                case SheetNames.Channels:
+                    bw.DoWork += BwChannelsQuery;
                     bw.RunWorkerCompleted += BwPendingChannelsCompleted;
-                    break;
-                case SheetNames.ClosedChannels:
-                    bw.DoWork += (o, args) => BwQuery(o, args, LndClient.ListClosedChannels);
-                    bw.RunWorkerCompleted += (o, args) =>
-                        BwListCompleted<ChannelCloseSummary, ClosedChannelsResponse>(o, args, _excelAddIn.ClosedChannelsSheet);
                     break;
                 case SheetNames.Payments:
                     bw.DoWork += (o, args) => BwQuery(o, args, LndClient.ListPayments);
@@ -104,11 +92,20 @@ namespace LNDExcel
             bw.RunWorkerAsync();
         }
 
+        private void BwChannelsQuery(object sender, DoWorkEventArgs e)
+        {
+            var openChannels = LndClient.ListChannels();
+            var pendingChannels = LndClient.ListPendingChannels();
+            var closedChannels = LndClient.ListClosedChannels();
+            var result = Tuple.Create(openChannels, pendingChannels, closedChannels);
+            e.Result = result;
+        }
+
         private void BwPendingChannelsCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
-            var result = (PendingChannelsResponse) e.Result;
-            _excelAddIn.PendingChannelsSheet.Update(result);
-            Utilities.RemoveLoadingMark(_excelAddIn.Wb.Sheets[SheetNames.PendingChannels]);
+            var result = (Tuple<ListChannelsResponse, PendingChannelsResponse, ClosedChannelsResponse>)e.Result;
+            _excelAddIn.ChannelsSheet.Update(result);
+            Utilities.RemoveLoadingMark(_excelAddIn.Wb.Sheets[SheetNames.Channels]);
         }
 
         private void BwBalancesCompleted(object sender, RunWorkerCompletedEventArgs e)

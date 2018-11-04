@@ -136,7 +136,7 @@ namespace LNDExcel
                 Formatting.WideTableColumn(Ws.Range[Ws.Cells[1, StartColumn], Ws.Cells[100, EndColumn]]);
             }
 
-            for (var rowI = 0; rowI <= rowCount; rowI++)
+            for (var rowI = 0; rowI < rowCount; rowI++)
             {
                 var rowNumber = rowI + DataStartRow;
                 var rowRange = Ws.Range[Ws.Cells[rowNumber, StartColumn], Ws.Cells[rowNumber, EndColumn]];

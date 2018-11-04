@@ -22,6 +22,7 @@ namespace LNDExcel
         public IList<FieldDescriptor> Fields;
         public Range ErrorData;
         private readonly int _dataStartRow;
+        private readonly Dictionary<string, int> _fieldToRow;
         
         public MessageForm(Worksheet ws, AsyncLightningApp lApp, Func<TRequestMessage, TResponseMessage> query, MessageDescriptor descriptor, string title, int startRow = 2,
             int startColumn = 2)
@@ -29,6 +30,7 @@ namespace LNDExcel
             Ws = ws;
             _lApp = lApp;
             _query = query;
+            _fieldToRow = new Dictionary<string, int>();
             Fields = descriptor.Fields.InDeclarationOrder();
             StartRow = startRow;
             StartColumn = startColumn;
@@ -58,7 +60,7 @@ namespace LNDExcel
                 headerCell.Value2 = fieldName;
                 var rowRange = ws.Range[ws.Cells[rowNumber, StartColumn], ws.Cells[rowNumber, EndColumn]];
                 Formatting.VerticalTableRow(rowRange, rowNumber);
-
+                _fieldToRow.Add(field.Name, rowNumber);
                 rowNumber++;
             }
             
@@ -85,7 +87,7 @@ namespace LNDExcel
             ClearErrorData();
             if (typeof(TRequestMessage) == typeof(ConnectPeerRequest))
             {
-                var fullAddress = (string) Ws.Cells[_dataStartRow, EndColumn].Value2;
+                var fullAddress = (string) Ws.Cells[_fieldToRow["addr"], EndColumn].Value2;
                 if (fullAddress == null) return;
                 var addressParts = fullAddress.Split('@');
 
@@ -104,7 +106,7 @@ namespace LNDExcel
                         return;
                 }
 
-                var permanent = Ws.Cells[_dataStartRow + 1, EndColumn].Value2;
+                var permanent = Ws.Cells[_fieldToRow["perm"], EndColumn].Value2;
                 bool perm = permanent == null || (bool) permanent;
 
                 var address = new LightningAddress { Host = host, Pubkey = pubkey };
@@ -113,8 +115,33 @@ namespace LNDExcel
                 {
                     _lApp.LndClient.ConnectPeer(request);
                     _lApp.Refresh(SheetNames.Peers);
-                    Ws.Cells[_dataStartRow, EndColumn].Value2 = "";
-                    Ws.Cells[_dataStartRow+1, EndColumn].Value2 = "";
+                    ClearForm();
+                }
+                catch (RpcException rpcException)
+                {
+                    DisplayError(rpcException);
+                }
+            }
+            else if (typeof(TRequestMessage) == typeof(SendCoinsRequest))
+            {
+                var request = new SendCoinsRequest
+                {
+                    Addr = Ws.Cells[_fieldToRow["addr"], EndColumn].Value2,
+                    Amount = (long)Ws.Cells[_fieldToRow["amount"], EndColumn].Value2
+                };
+                var satPerByte = Ws.Cells[_fieldToRow["sat_per_byte"], EndColumn].Value2;
+                if (satPerByte == null) satPerByte = 0;
+                if (satPerByte > 0) request.SatPerByte = satPerByte;
+
+                var targetConf = Ws.Cells[_fieldToRow["target_conf"], EndColumn].Value2;
+                if (targetConf == null) targetConf = 0;
+                if (targetConf > 0) request.TargetConf = targetConf;
+
+                try
+                {
+                    _lApp.LndClient.SendCoins(request);
+                    _lApp.Refresh(SheetNames.Transactions);
+                    ClearForm();
                 }
                 catch (RpcException rpcException)
                 {
@@ -136,6 +163,17 @@ namespace LNDExcel
                 }
 
                 _query(request);
+            }
+        }
+
+        private void ClearForm()
+        {
+            var rowNumber = _dataStartRow;
+            foreach (var _ in Fields)
+            {
+                var dataCell = Ws.Cells[rowNumber, EndColumn];
+                dataCell.Value2 = "";
+                rowNumber++;
             }
         }
 

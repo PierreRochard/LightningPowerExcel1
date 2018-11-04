@@ -198,6 +198,12 @@ namespace LNDExcel
             return response;
         }
 
+        public SendCoinsResponse SendCoins(SendCoinsRequest request)
+        {
+            var response = GetLightningClient().SendCoins(request);
+            return response;
+        }
+
         public TransactionDetails GetTransactions()
         {
             var request = new GetTransactionsRequest();
