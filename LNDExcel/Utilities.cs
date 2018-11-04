@@ -10,6 +10,8 @@ using Google.Protobuf.Collections;
 using Google.Protobuf.Reflection;
 using Grpc.Core;
 using Microsoft.Office.Interop.Excel;
+using Microsoft.Office.Tools.Excel;
+using Worksheet = Microsoft.Office.Interop.Excel.Worksheet;
 
 namespace LNDExcel
 {
@@ -57,10 +59,10 @@ namespace LNDExcel
 
         public static Microsoft.Office.Tools.Excel.Controls.Button CreateButton(string buttonName, Worksheet ws, Range selection, string buttonText)
         {
-            var button = new Microsoft.Office.Tools.Excel.Controls.Button();
             var worksheet = Globals.Factory.GetVstoObject(ws);
-            worksheet.Controls.AddControl(button, selection, buttonName);
+            var button = worksheet.Controls.AddButton(selection, buttonName);
             button.Text = buttonText;
+            button.Placement = XlPlacement.xlFreeFloating;
             return button;
         }
 

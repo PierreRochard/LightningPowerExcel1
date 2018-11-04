@@ -44,6 +44,7 @@ namespace LNDExcel
         
         public void InitializePaymentRequest()
         {
+            Ws.Activate();
             _payReqLabelCell = Ws.Cells[StartRow, StartColumn];
             _payReqLabelCell.Value2 = "Payment request:";
             _payReqLabelCell.Font.Bold = true;

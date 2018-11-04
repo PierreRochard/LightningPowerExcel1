@@ -28,6 +28,7 @@ namespace LNDExcel
             int startColumn = 2)
         {
             Ws = ws;
+            Ws.Activate();
             _lApp = lApp;
             _query = query;
             _fieldToRow = new Dictionary<string, int>();
@@ -65,7 +66,7 @@ namespace LNDExcel
             }
             
             var submitButtonRow = rowNumber + 2;
-            Button submitButton = Utilities.CreateButton("submit", ws, ws.Cells[submitButtonRow, StartColumn], "Submit");
+            Button submitButton = Utilities.CreateButton("submit" + descriptor.Name, ws, ws.Cells[submitButtonRow, StartColumn], "Submit");
             submitButton.Click += SubmitButtonOnClick;
             ErrorData = ws.Cells[submitButtonRow, StartColumn + 2];
             ErrorData.WrapText = false;
