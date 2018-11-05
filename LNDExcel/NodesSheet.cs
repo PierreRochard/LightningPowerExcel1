@@ -11,14 +11,14 @@ namespace LNDExcel
     public class NodeSheet
     {
         public Worksheet Ws;
-        public bool isProcessOurs = false;
+        public bool IsProcessOurs;
 
         public NodeSheet(Worksheet ws)
         {
             Ws = ws;
         }
 
-        public void StartLocalNode()
+        public void StartLocalNode(LndClientConfiguration conf)
         {
             var bw = new BackgroundWorker { WorkerReportsProgress = true, WorkerSupportsCancellation = true };
             if (SynchronizationContext.Current == null)
@@ -26,7 +26,7 @@ namespace LNDExcel
                 SynchronizationContext.SetSynchronizationContext(new WindowsFormsSynchronizationContext());
             }
 
-            bw.DoWork += RunLnd;
+            bw.DoWork += (sender, args) => RunLnd(sender, args, conf.Network, conf.BitcoindRpcUser, conf.BitcoindRpcPassword, conf.Autopilot);
             bw.ProgressChanged += BwRunLndOnProgressChanged;
             bw.RunWorkerAsync();
         }
@@ -36,9 +36,10 @@ namespace LNDExcel
             WriteToLog(e.UserState);
         }
 
-        private void RunLnd(object sender, DoWorkEventArgs e)
+        // ReSharper disable once UnusedParameter.Local
+        private void RunLnd(object sender, DoWorkEventArgs e, string network, string rpcUser, string rpcPassword, bool autopilot)
         {
-            if (isProcessOurs) return;
+            if (IsProcessOurs) return;
 
             var processes = Process.GetProcessesByName("tempfileLND");
             foreach (var t in processes)
@@ -59,9 +60,29 @@ namespace LNDExcel
             {
                 File.WriteAllBytes(path, Properties.Resources.lnd);
             }
+#pragma warning disable 168
             catch (IOException exception)
+#pragma warning restore 168
             {
                 return;
+            }
+
+            var cmdArgs = "--bitcoin.active " +
+                          $"--bitcoin.{network} " +
+                          "--bitcoin.node=bitcoind " +
+                          "--bitcoind.rpchost=127.0.0.1 " +
+                          $"--bitcoind.rpcuser={rpcUser} " +
+                          $"--bitcoind.rpcpass={rpcPassword} " +
+                          "--bitcoind.zmqpubrawblock=tcp://127.0.0.1:18501 " +
+                          "--bitcoind.zmqpubrawtx=tcp://127.0.0.1:18502" +
+                          "--debuglevel=info ";
+            if (autopilot)
+            {
+                cmdArgs += "--autopilot.active " +
+                           "--autopilot.maxchannels=10 " +
+                           "--autopilot.allocation=1 " +
+                           "--autopilot.minchansize=600000 " +
+                           "--autopilot.private ";
             }
 
             var nodeProcess = new Process
@@ -69,16 +90,7 @@ namespace LNDExcel
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = path,
-                    Arguments = "--bitcoin.active " +
-                                "--bitcoin.testnet " +
-                                "--autopilot.active " +
-                                "--autopilot.maxchannels=10 " +
-                                "--autopilot.allocation=1 " +
-                                "--autopilot.minchansize=600000 " +
-                                "--autopilot.private " +
-                                "--bitcoin.node=neutrino " +
-                                "--neutrino.connect=faucet.lightning.community " +
-                                "--debuglevel=info",
+                    Arguments = cmdArgs,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -86,7 +98,7 @@ namespace LNDExcel
                 }
             };
             nodeProcess.Start();
-            isProcessOurs = true;
+            IsProcessOurs = true;
             nodeProcess.EnableRaisingEvents = true;
             nodeProcess.OutputDataReceived += (o, args) =>
                 NodeProcessOutputDataReceived(o, args, (BackgroundWorker) sender);
@@ -100,9 +112,17 @@ namespace LNDExcel
         private void WriteToLog(object logMessage)
         {
             var line = (Range)Ws.Rows[1];
-            line.Insert(XlInsertShiftDirection.xlShiftDown);
-            var cell = Ws.Cells[1, 1];
-            cell.Value2 = logMessage;
+            try
+            {
+                line.Insert(XlInsertShiftDirection.xlShiftDown);
+                var cell = Ws.Cells[1, 1];
+                cell.Value2 = logMessage;
+            }
+            catch (Exception)
+            {
+                // ignored
+            }
+
         }
 
         // ReSharper disable once UnusedParameter.Local

@@ -7,24 +7,19 @@ namespace LNDExcel
     public class PeersSheet
     {
         public AsyncLightningApp LApp;
-        public Worksheet Ws;
 
         public MessageForm<ConnectPeerRequest, ConnectPeerResponse> PeersForm;
         public TableSheet<Peer> PeersTable;
-
-        public int StartColumn = 2;
-        public int StartRow = 2;
-
+        
         public PeersSheet(Worksheet ws, AsyncLightningApp lApp)
         {
-            Ws = ws;
             LApp = lApp;
 
             PeersForm = new MessageForm<ConnectPeerRequest, ConnectPeerResponse>(ws, LApp, LApp.LndClient.ConnectPeer, ConnectPeerRequest.Descriptor, "Connect to a peer");
             PeersTable = new TableSheet<Peer>(ws, LApp, Peer.Descriptor, "pub_key");
             PeersTable.SetupTable("Peers", startRow: PeersForm.EndRow + 2);
 
-            Ws.Change += WsOnChange;
+            ws.Change += WsOnChange;
         }
 
         private void WsOnChange(Range target)

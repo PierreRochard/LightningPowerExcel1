@@ -37,7 +37,17 @@ namespace LNDExcel
 
         public static void RemoveLoadingMark(Worksheet ws)
         {
-            ws.Cells[1, 2].Value2 = "";
+            try
+            {
+                ws.Cells[1, 2].Value2 = "";
+
+            }
+#pragma warning disable 168
+            catch (Exception e)
+#pragma warning restore 168
+            {
+                // ignored
+            }
         }
 
         public static string FormatFieldName(string fieldName)

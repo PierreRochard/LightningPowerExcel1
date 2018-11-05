@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Reflection;
 using Grpc.Core;
 using Lnrpc;
 using Microsoft.Office.Interop.Excel;
@@ -84,7 +83,7 @@ namespace LNDExcel
             PopulateRow("CaCertString", conf.CaCertString, true);
             PopulateRow("CaCertPath", conf.CaCertPath);
 
-            PopulateRow("Password", conf.Password, true);
+            PopulateRow("LND Wallet Password", conf.WalletPassword, true);
 
             Formatting.VerticalTable(Ws.Range[Ws.Cells[_startRow, _startColumn],
             Ws.Cells[_startRow + 7, _startColumn + 1]]);

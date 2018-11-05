@@ -20,8 +20,13 @@ namespace LNDExcel
 
         public string Network = "testnet";
         public string Host = "localhost";
-        public int Port = 10009;
-        public string Password = "test_password";
+        public double Port = 10009;
+        public string WalletPassword = "test_password";
+        public bool Autopilot = false;
+
+        public string BitcoindRpcUser = "default_user";
+        public string BitcoindRpcPassword = "default_password";
+        
 
         public static string LndDataPath
         {
@@ -102,7 +107,7 @@ namespace LNDExcel
             {
                 var callCredentials = CallCredentials.FromInterceptor(AsyncAuthInterceptor);
                 var channelCredentials = ChannelCredentials.Create(GetSslCredentials(), callCredentials);
-                var channel = new Channel(Host, Port, channelCredentials);
+                var channel = new Channel(Host, (int)Port, channelCredentials);
                 return channel;
             }
         }
@@ -218,24 +223,13 @@ namespace LNDExcel
             return response;
         }
 
-        public IAsyncStreamReader<OpenStatusUpdate> OpenChannel(string nodePubkey, long localFundingAmount, long pushSat = 0, bool isPrivate = true, 
-            long minHtlcMsat = 16000, int minConfs = 1, uint remoteCsvDelay=0, long satPerByte = 0, int targetConf = 0)
+        public ChannelPoint OpenChannel(OpenChannelRequest request)
         {
-            var request = new OpenChannelRequest
-            {
-                LocalFundingAmount = localFundingAmount,
-                MinConfs = minConfs,
-                MinHtlcMsat = minHtlcMsat,
-                NodePubkey = ByteString.CopyFromUtf8(nodePubkey),
-                NodePubkeyString = nodePubkey,
-                Private = isPrivate,
-                PushSat = pushSat
-            };
-            if (remoteCsvDelay > 0) request.RemoteCsvDelay = remoteCsvDelay;
-            if (satPerByte > 0) request.SatPerByte = satPerByte;
-            if (targetConf > 0) request.TargetConf = targetConf;
-            var response = GetLightningClient().OpenChannel(request);
-            return response.ResponseStream;
+            var response = GetLightningClient().OpenChannelSync(request);
+           // var stream = response.ResponseStream;
+          //  stream.MoveNext(CancellationToken.None).GetAwaiter().GetResult();
+           // return stream.Current.ChanPending;
+            return response;
         }
 
         public PendingChannelsResponse ListPendingChannels()
@@ -259,19 +253,19 @@ namespace LNDExcel
             return response;
         }
 
-        public CloseStatusUpdate CloseChannel(string channelPoint, bool force)
+        public void CloseChannel(string channelPoint, bool force)
         {
             var request = new CloseChannelRequest
             {
                 ChannelPoint = new ChannelPoint
                 {
-                    FundingTxidBytes = ByteString.CopyFromUtf8(channelPoint.Split(':')[0]),
+                    FundingTxidStr = channelPoint.Split(':')[0],
                     OutputIndex = uint.Parse(channelPoint.Split(':')[1])
-                }
+                },
+                Force = force
             };
             var stream = GetLightningClient().CloseChannel(request).ResponseStream;
             stream.MoveNext(CancellationToken.None);
-            return stream.Current;
         }
 
         public ClosedChannelsResponse ListClosedChannels()

@@ -149,6 +149,42 @@ namespace LNDExcel
                     DisplayError(rpcException);
                 }
             }
+            else if (typeof(TRequestMessage) == typeof(OpenChannelRequest))
+            {
+                var localFundingAmount = long.Parse(GetValue("local_funding_amount"));
+                var minConfs = int.Parse(GetValue("min_confs"));
+                var minHtlcMsat = long.Parse(GetValue("min_htlc_msat"));
+                var nodePubKeyString = GetValue("node_pubkey");
+                var isPrivate = true;
+                if (bool.TryParse(GetValue("private"), out var result)) isPrivate = result;
+                var pushSat = long.Parse(GetValue("push_sat"));
+                var remoteCsvDelay = uint.Parse(GetValue("remote_csv_delay"));
+                var satPerByte = long.Parse(GetValue("sat_per_byte"));
+                var targetConf = int.Parse(GetValue("target_conf"));
+                var request = new OpenChannelRequest
+                {
+                    LocalFundingAmount = localFundingAmount,
+                    MinConfs = minConfs,
+                    MinHtlcMsat = minHtlcMsat,
+                    NodePubkeyString = nodePubKeyString,
+                    Private = isPrivate,
+                    PushSat = pushSat
+                };
+                if (remoteCsvDelay > 0) request.RemoteCsvDelay = remoteCsvDelay;
+                if (satPerByte > 0) request.SatPerByte = satPerByte;
+                if (targetConf > 0) request.TargetConf = targetConf;
+
+                try
+                {
+                    _lApp.LndClient.OpenChannel(request);
+                    _lApp.Refresh(SheetNames.Channels);
+                    ClearForm();
+                }
+                catch (RpcException rpcException)
+                {
+                    DisplayError(rpcException);
+                }
+            }
             else
             {
                 var request = new TRequestMessage();
@@ -165,6 +201,13 @@ namespace LNDExcel
 
                 _query(request);
             }
+        }
+
+        private string GetValue(string name)
+        {
+            var value = Ws.Cells[_fieldToRow[name], EndColumn].Value2;
+            var adjValue = value ?? "0";
+            return adjValue.ToString();
         }
 
         private void ClearForm()

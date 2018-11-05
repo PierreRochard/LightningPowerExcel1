@@ -27,7 +27,6 @@ namespace LNDExcel
         public Range Title;
 
         private readonly List<string> _wideColumns;
-        private readonly List<string> _timestampColumns;
         private readonly IFieldAccessor _uniqueKeyField;
         private readonly string _uniqueKeyName;
         private readonly int _limit;
@@ -91,10 +90,6 @@ namespace LNDExcel
                 "tx_hash",
                 "block_hash",
                 "dest_addresses"
-            };
-            _timestampColumns = new List<string>
-            {
-                "time_stamp"
             };
         }
 
@@ -225,7 +220,7 @@ namespace LNDExcel
                 Ws.Columns.AutoFit();
 
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 return;
             }

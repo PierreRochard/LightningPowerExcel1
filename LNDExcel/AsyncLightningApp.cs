@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading;
@@ -10,7 +9,6 @@ using Google.Protobuf.Collections;
 using Grpc.Core;
 using Lnrpc;
 using Microsoft.Office.Interop.Excel;
-using Channel = Lnrpc.Channel;
 
 namespace LNDExcel
 {
@@ -29,12 +27,12 @@ namespace LNDExcel
         {
             if (LndClient.Config.Host == "localhost")
             {
-                _excelAddIn.NodesSheet.StartLocalNode();
+                _excelAddIn.NodesSheet.StartLocalNode(LndClient.Config);
             }
-            LndClient.TryUnlockWallet(LndClient.Config.Password);
+            LndClient.TryUnlockWallet(LndClient.Config.WalletPassword);
             Refresh(SheetNames.Payments);
             Refresh(SheetNames.Channels);
-            Refresh(SheetNames.Transactions);
+          //  Refresh(SheetNames.Transactions);
             Refresh(SheetNames.Balances);
             Refresh(SheetNames.Peers);
             Refresh(SheetNames.Connect);
@@ -168,7 +166,7 @@ namespace LNDExcel
 
         }
 
-        public void SendPayment(string paymentRequest, List<Route> routes = null)
+        public void SendPayment(string paymentRequest)
         {
             var bw = new BackgroundWorker {WorkerReportsProgress = true};
             if (SynchronizationContext.Current == null)
@@ -177,7 +175,7 @@ namespace LNDExcel
             }
 
             const int timeout = 30;
-            bw.DoWork += (o, args) => BwSendPayment(o, args, paymentRequest, timeout, routes);
+            bw.DoWork += (o, args) => BwSendPayment(o, args, paymentRequest, timeout);
             bw.ProgressChanged += BwSendPaymentOnProgressChanged;
             bw.RunWorkerCompleted += BwSendPayment_Completed;
             _excelAddIn.SendPaymentSheet.MarkSendingPayment();
@@ -189,17 +187,17 @@ namespace LNDExcel
             _excelAddIn.SendPaymentSheet.UpdateSendPaymentProgress(e.ProgressPercentage);
         }
 
-        private void BwSendPayment(object sender, DoWorkEventArgs e, string paymentRequest, int timeout, List<Route> routes = null)
+        private void BwSendPayment(object sender, DoWorkEventArgs e, string paymentRequest, int timeout)
         {
             if (sender != null)
             {
-                e.Result = ProgressSend(sender, paymentRequest, timeout, routes).GetAwaiter().GetResult();
+                e.Result = ProgressSend(sender, paymentRequest, timeout).GetAwaiter().GetResult();
             }
         }
 
-        private async Task<SendResponse> ProgressSend(object sender, string paymentRequest, int timeout, List<Route> routes = null)
+        private async Task<SendResponse> ProgressSend(object sender, string paymentRequest, int timeout)
         {
-            var sendTask = SendPaymentAsync(sender, paymentRequest, timeout, routes);
+            var sendTask = SendPaymentAsync(sender, paymentRequest, timeout);
             var i = 0;
             while (!sendTask.IsCompleted)
             {
@@ -212,7 +210,7 @@ namespace LNDExcel
         }
 
         // ReSharper disable once UnusedParameter.Local
-        private async Task<SendResponse> SendPaymentAsync(object sender, string paymentRequest, int timeout, List<Route> routes = null)
+        private async Task<SendResponse> SendPaymentAsync(object sender, string paymentRequest, int timeout)
         {
             var stream = LndClient.SendPayment(paymentRequest, timeout);
             await stream.MoveNext(CancellationToken.None);

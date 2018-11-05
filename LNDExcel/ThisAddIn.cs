@@ -1,11 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using Grpc.Core;
 using Lnrpc;
 using Microsoft.Office.Interop.Excel;
-using Channel = Lnrpc.Channel;
 
 namespace LNDExcel
 {
@@ -131,7 +129,7 @@ namespace LNDExcel
         
         private void ThisAddIn_Shutdown(object sender, EventArgs e)
         {
-            if (!NodesSheet.isProcessOurs) return;
+            if (!NodesSheet.IsProcessOurs) return;
 
             try
             {
@@ -139,7 +137,7 @@ namespace LNDExcel
             }
             catch (RpcException)
             {
-                NodesSheet.isProcessOurs = false;
+                NodesSheet.IsProcessOurs = false;
             }
         }
 

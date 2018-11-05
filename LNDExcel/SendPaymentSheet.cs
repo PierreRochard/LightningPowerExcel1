@@ -186,14 +186,7 @@ namespace LNDExcel
 
             try
             {
-                if (PotentialRoutesTable.DataList == null || PotentialRoutesTable.DataList.Count == 0)
-                {
-                    LApp.SendPayment(payReq);
-                }
-                else
-                {
-                    LApp.SendPayment(payReq, PotentialRoutesTable.DataList);
-                }
+                LApp.SendPayment(payReq);
             }
             catch (RpcException rpcException)
             {
